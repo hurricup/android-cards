@@ -18,10 +18,8 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,9 +34,8 @@ class QuestionaryActivity() : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
-            var index: Int by remember { mutableStateOf(0) }
+            val indexes = remember { questionary.questions.indices.shuffled().toMutableStateList() }
 
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -54,7 +51,7 @@ class QuestionaryActivity() : ComponentActivity() {
                 ) {
                     Text(
                         textAlign = TextAlign.Center,
-                        text = questionary[index].text,
+                        text = questionary[indexes[0]].text,
                         fontSize = 8.em,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -68,10 +65,10 @@ class QuestionaryActivity() : ComponentActivity() {
                 ) {
                     IconButton(
                         onClick = {
-                            if (index == questionary.size - 1) {
+                            if (indexes.size == 1) {
                                 finish()
                             } else {
-                                index++
+                                indexes.removeAt(0)
                             }
                         }, modifier = Modifier
                             .weight(1f)
@@ -84,10 +81,10 @@ class QuestionaryActivity() : ComponentActivity() {
                     }
                     IconButton(
                         onClick = {
-                            if (index == questionary.size - 1) {
+                            if (indexes.size == 1) {
                                 finish()
                             } else {
-                                index++
+                                indexes.removeAt(0)
                             }
                         }, modifier = Modifier
                             .weight(1f)
