@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,13 +48,19 @@ fun Questionaries(
     questionaries: List<Questionary>,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.padding(10.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .padding(10.dp)
+            .fillMaxSize(1f)
+    ) {
         for (questionary in questionaries) {
             TextButton(
                 border = ButtonDefaults.outlinedButtonBorder,
                 modifier = Modifier
                     .padding(10.dp)
-                    .fillMaxWidth(1f),
+                    .fillMaxWidth(0.9f),
                 onClick = {
                     Intent(mainActivity, QuestionaryActivity::class.java).also {
                         questionary.passWith(it)
@@ -62,7 +70,6 @@ fun Questionaries(
             ) {
                 Text(
                     text = questionary.title,
-                    modifier = modifier,
                     textAlign = TextAlign.Left,
                     fontSize = 30.sp
                 )
