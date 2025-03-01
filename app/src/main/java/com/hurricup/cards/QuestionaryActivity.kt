@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -36,12 +37,31 @@ class QuestionaryActivity() : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val indexes = remember { questionary.questions.indices.shuffled().toMutableStateList() }
+            val stats = remember { mutableStateOf(Stat()) }
 
             Column(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
+
+                if (stats.value.total > 0) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            textAlign = TextAlign.Center,
+                            text = "${stats.value.correct} of ${stats.value.total} (${stats.value.percent}%), ${indexes.size} left",
+                            fontSize = 4.em,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                        )
+                    }
+                }
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -65,6 +85,7 @@ class QuestionaryActivity() : ComponentActivity() {
                 ) {
                     IconButton(
                         onClick = {
+                            stats.value.correct++
                             if (indexes.size == 1) {
                                 finish()
                             } else {
@@ -81,6 +102,7 @@ class QuestionaryActivity() : ComponentActivity() {
                     }
                     IconButton(
                         onClick = {
+                            stats.value.incorrect++
                             if (indexes.size == 1) {
                                 finish()
                             } else {
@@ -100,4 +122,14 @@ class QuestionaryActivity() : ComponentActivity() {
             }
         }
     }
+}
+
+class Stat() {
+    var correct: Int = 0
+    var incorrect: Int = 0
+    val total: Int
+        get() = correct + incorrect
+
+    val percent: Int
+        get() = correct * 100 / total
 }
