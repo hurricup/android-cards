@@ -24,7 +24,7 @@ import com.hurricup.cards.ui.theme.AndroidCardsTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val questionaries = Questionary.readAll(resources)
+        val questionaries = Questionary.readAll(assets)
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -64,7 +64,7 @@ fun Questionaries(questionaries: List<Questionary>, modifier: Modifier = Modifie
 
 @Preview(showBackground = true)
 @Composable
-fun GreetingPreview() {
+fun QuestionariesPreview() {
     AndroidCardsTheme {
         Questionaries(listOf(Questionary("Test Questionary"), Questionary("Other Questionary")))
     }
