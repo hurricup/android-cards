@@ -1,5 +1,6 @@
 package com.hurricup.cards
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,7 +16,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hurricup.cards.model.Questionary
@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
             AndroidCardsTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Questionaries(
+                        this,
                         questionaries,
                         modifier = Modifier.padding(innerPadding)
                     )
@@ -40,7 +41,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Questionaries(questionaries: List<Questionary>, modifier: Modifier = Modifier) {
+fun Questionaries(
+    mainActivity: MainActivity,
+    questionaries: List<Questionary>,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier.padding(10.dp)) {
         for (questionary in questionaries) {
             TextButton(
@@ -49,6 +54,10 @@ fun Questionaries(questionaries: List<Questionary>, modifier: Modifier = Modifie
                     .padding(10.dp)
                     .fillMaxWidth(1f),
                 onClick = {
+                    Intent(mainActivity, QuestionaryActivity::class.java).also {
+                        questionary.passWith(it)
+                        mainActivity.startActivity(it)
+                    }
                 }
             ) {
                 Text(
@@ -59,13 +68,5 @@ fun Questionaries(questionaries: List<Questionary>, modifier: Modifier = Modifie
                 )
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun QuestionariesPreview() {
-    AndroidCardsTheme {
-        Questionaries(listOf(Questionary("Test Questionary"), Questionary("Other Questionary")))
     }
 }

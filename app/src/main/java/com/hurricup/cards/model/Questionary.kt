@@ -1,5 +1,6 @@
 package com.hurricup.cards.model
 
+import android.content.Intent
 import android.content.res.AssetManager
 import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
@@ -7,12 +8,24 @@ import org.xmlpull.v1.XmlPullParser.END_DOCUMENT
 import org.xmlpull.v1.XmlPullParser.START_TAG
 import java.io.InputStream
 
+private const val INTENT_KEY = "questionary"
+
 class Questionary(val title: String) {
     private val _questions: MutableList<Question> = mutableListOf()
     val questions
         get() = _questions.toList()
+    val size
+        get() = _questions.size
+
+    operator fun get(index: Int) = _questions[index]
+
+    fun passWith(intent: Intent) = intent.putExtra(INTENT_KEY, title)
 
     companion object {
+        val cache: MutableMap<String, Questionary> = mutableMapOf()
+
+        fun from(intent: Intent): Questionary = cache[intent.getStringExtra(INTENT_KEY)]!!
+
         fun readAll(assetsManager: AssetManager): List<Questionary> =
             assetsManager.list("xml")?.flatMap {
                 assetsManager.open("xml/$it").use { readFile(it).asSequence() }
@@ -24,7 +37,7 @@ class Questionary(val title: String) {
             xmlParser.setInput(inputStream, null)
             val questionaries = mutableListOf<Questionary>()
             while (xmlParser.next() != END_DOCUMENT) {
-                if (xmlParser.eventType == START_TAG && xmlParser.name == "questionary") {
+                if (xmlParser.eventType == START_TAG && xmlParser.name == INTENT_KEY) {
                     readQuestionary(xmlParser)?.let { questionaries.add(it) }
                 }
             }
@@ -41,7 +54,9 @@ class Questionary(val title: String) {
                     }
                 }
             }
-            return questionary
+            return questionary?.also {
+                cache.put(it.title, it)
+            }
         }
 
         private fun readQuestions(xmlParser: XmlPullParser): List<Question> {
