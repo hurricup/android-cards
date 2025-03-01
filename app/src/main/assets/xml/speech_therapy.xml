@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<questionary>
+    <title>Учим звуки</title>
+    <questions>
+        <question>
+            <text>Ша-ша-ша - ша-ша-ша &#8211; наша Маша хороша.</text>
+        </question>
+        <question>
+            <text>Ша-ша-ша - ша-ша-ша &#8211; Маша моет малыша.</text>
+        </question>
+        <question>
+            <text>Шо-шо-шо - шо-шо-шо &#8211; Паша пишет хорошо.</text>
+        </question>
+    </questions>
+</questionary>
