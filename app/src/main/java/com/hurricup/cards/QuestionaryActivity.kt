@@ -20,7 +20,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,8 +38,26 @@ class QuestionaryActivity() : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val indexes = remember { questionary.questions.indices.shuffled().toMutableStateList() }
-            val stats = remember { mutableStateOf(Stat()) }
+            val indexes = rememberSaveable(saver = Saver(
+                save = {
+                    ArrayList(it.toList())
+                },
+                restore = {
+                    it.toMutableStateList()
+                }
+            )) { questionary.questions.indices.shuffled().toMutableStateList() }
+            val stats = rememberSaveable(saver = Saver(
+                save = {
+                    ArrayList(listOf(it.value.correct, it.value.incorrect))
+                },
+                restore = {
+                    val result = Stat()
+                    result.correct = it[0]
+                    result.incorrect = it[1]
+                    mutableStateOf(result)
+                }
+
+            )) { mutableStateOf(Stat()) }
 
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -128,7 +147,7 @@ class QuestionaryActivity() : ComponentActivity() {
     }
 }
 
-class Stat() {
+class Stat {
     var correct: Int = 0
     var incorrect: Int = 0
     val total: Int
