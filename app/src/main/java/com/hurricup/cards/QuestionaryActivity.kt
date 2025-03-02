@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
@@ -62,20 +63,23 @@ class QuestionaryActivity() : ComponentActivity() {
                     }
                 }
 
-                Box(
-                    contentAlignment = Alignment.Center,
+                Column(
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.Center,
                     modifier = Modifier
-                        .fillMaxSize()
+                        .wrapContentWidth()
                         .padding(10.dp)
                         .weight(1f)
                 ) {
-                    Text(
-                        textAlign = TextAlign.Center,
-                        text = questionary[indexes[0]].text,
-                        fontSize = 8.em,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
+                    val text = questionary[indexes[0]].text
+                    text.split('\n').forEach {
+                        Text(
+                            text = it.trim(),
+                            fontSize = 6.em,
+                            modifier = Modifier
+                                .wrapContentWidth()
+                        )
+                    }
                 }
 
                 Row(
