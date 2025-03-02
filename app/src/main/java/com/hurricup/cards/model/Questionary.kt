@@ -85,7 +85,7 @@ class Questionary(val title: String) {
             xmlParser.next()
             val result = xmlParser.text
             xmlParser.nextTag()
-            return result
+            return result.replace("--", "—")
         }
     }
 }

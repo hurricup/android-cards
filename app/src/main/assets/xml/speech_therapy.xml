@@ -3,13 +3,71 @@
     <title>Учим звуки</title>
     <questions>
         <question>
-            <text>Ша-ша-ша - ша-ша-ша &#8211; наша Маша хороша.</text>
+            <text>Ша-ша-ша -- ша-ша-ша -- наша Маша хороша.</text>
         </question>
         <question>
-            <text>Ша-ша-ша - ша-ша-ша &#8211; Маша моет малыша.</text>
+            <text>Ша-ша-ша -- ша-ша-ша -- Маша моет малыша.</text>
         </question>
         <question>
-            <text>Шо-шо-шо - шо-шо-шо &#8211; Паша пишет хорошо.</text>
+            <text>Шо-шо-шо -- шо-шо-шо -- Паша пишет хорошо.</text>
         </question>
+        <question>
+            <text>Шо-шо-шо -- Шо-шо-шо -- мы рисуем хорошо.</text>
+        </question>
+        <question>
+            <text>Шо-шу-шу -- Шо-шу-шу -- буквы на доске пишу.</text>
+        </question>
+        <question>
+            <text>Шо-шу-шу -- Шо-шу-шу -- хорошо я их пишу.</text>
+        </question>
+        <question>
+            <text>Ши-ши-ши -- Ши-ши-ши -- вот играют малыши.</text>
+        </question>
+        <question>
+            <text>Ши-ши-ши -- Ши-ши-ши -- у них есть карандаши.</text>
+        </question>
+        <question>
+            <text>Аш-аш-аш -- Аш-аш-аш - это Мишин карандаш.</text>
+        </question>
+        <question>
+            <text>Аш-аш-аш -- Аш-аш-аш - это Машин карандаш.</text>
+        </question>
+        <question>
+            <text>Ош-ош-ош -- Ош-ош-ош -- я на дедушку похож.</text>
+        </question>
+        <question>
+            <text>Ош-ош-ош -- Ош-ош-ош -- я на бабушку похож.</text>
+        </question>
+        <question>
+            <text>Уш-уш-уш -- Уш-уш-уш -- папа починил наш душ.</text>
+        </question>
+        <question>
+            <text>Ша-ша-ша -- нет карандаша.</text>
+        </question>
+        <question>
+            <text>Шо-шо-шо -- нам гулять хорошо.</text>
+        </question>
+        <question>
+            <text>Шу-шу-шу -- я сижу и не шуршу.</text>
+        </question>
+        <question>
+            <text>Ши-ши-ши -- притихли малыши.</text>
+        </question>
+        <question>
+            <text>Ше-ше-ше -- радостно душе.</text>
+        </question>
+        <question>
+            <text>
+                Ша-ша-ша-ша,
+                Наша Таня хороша.
+                Шо-шо-шо-шо,
+                И поет хорошо.
+                Шу-шу-шу-шу,
+                Поет песню малышу.
+                Ши-ши-ши-ши,
+                Любят песни малыши.
+            </text>
+        </question>
+
     </questions>
 </questionary>
