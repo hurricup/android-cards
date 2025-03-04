@@ -3,16 +3,20 @@ package com.hurricup.cards
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
@@ -25,11 +29,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.hurricup.cards.model.Questionary
+
+private val darkGreen = Color(0xFF66BB66)
+private val darkRed = Color(0xFFBB6666)
+private val darkGray = Color(0xFFD5D5D5)
 
 class QuestionaryActivity() : ComponentActivity() {
     private val questionary: Questionary
@@ -51,34 +59,66 @@ class QuestionaryActivity() : ComponentActivity() {
                     ArrayList(listOf(it.value.correct, it.value.incorrect))
                 },
                 restore = {
-                    val result = Stat()
+                    val result = Stat(questionary.size)
                     result.correct = it[0]
                     result.incorrect = it[1]
                     mutableStateOf(result)
                 }
 
-            )) { mutableStateOf(Stat()) }
+            )) { mutableStateOf(Stat(questionary.size)) }
 
             Column(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
+                Box(
+                    modifier = Modifier
+                        .padding(10.dp, 30.dp)
+                        .fillMaxWidth()
 
-                if (stats.value.total > 0) {
-                    Box(
-                        contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(10.dp)
+                            .height(30.dp)
+                            .clip(shape = RoundedCornerShape(10.dp))
                     ) {
-                        Text(
-                            textAlign = TextAlign.Center,
-                            text = "${stats.value.correct} of ${stats.value.total} (${stats.value.percent}%), ${indexes.size} left",
-                            fontSize = 4.em,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                        )
+                        stats.value.let {
+                            if (it.correct > 0) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .weight(it.correctWeight)
+                                        .fillMaxHeight()
+                                        .background(darkGreen)
+                                ) {
+                                    Text(it.correct.toString())
+                                }
+                            }
+                            if (it.incorrect > 0) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .weight(it.incorrectWeight)
+                                        .fillMaxHeight()
+                                        .background(darkRed)
+                                ) {
+                                    Text(it.incorrect.toString())
+                                }
+                            }
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .weight(it.leftWeight)
+                                    .fillMaxHeight()
+                                    .background(darkGray)
+                            ) {
+                                Text(it.left.toString())
+                            }
+                        }
                     }
                 }
 
@@ -119,7 +159,7 @@ class QuestionaryActivity() : ComponentActivity() {
                             .size(100.dp)
                     ) {
                         Icon(
-                            Icons.Filled.Done, "Right", tint = Color.Green,
+                            Icons.Filled.Done, "Right", tint = darkGreen,
                             modifier = Modifier.size(80.dp)
                         )
                     }
@@ -136,7 +176,7 @@ class QuestionaryActivity() : ComponentActivity() {
                             .size(100.dp)
                     ) {
                         Icon(
-                            Icons.Filled.Close, "Wrong", tint = Color.Red,
+                            Icons.Filled.Close, "Wrong", tint = darkRed,
                             modifier = Modifier.size(80.dp)
                         )
                     }
@@ -147,12 +187,20 @@ class QuestionaryActivity() : ComponentActivity() {
     }
 }
 
-class Stat {
+class Stat(val total: Int) {
     var correct: Int = 0
     var incorrect: Int = 0
-    val total: Int
+
+    val done: Int
         get() = correct + incorrect
 
-    val percent: Int
-        get() = correct * 100 / total
+    val left: Int
+        get() = total - done
+
+    val leftWeight: Float
+        get() = left.toFloat() / total.toFloat()
+    val correctWeight: Float
+        get() = correct.toFloat() / total.toFloat()
+    val incorrectWeight: Float
+        get() = incorrect.toFloat() / total.toFloat()
 }
