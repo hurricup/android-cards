@@ -46,7 +46,8 @@ class QuestionaryActivity() : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val indexes = rememberSaveable(saver = Saver(
+            val indexes = rememberSaveable(
+                saver = Saver(
                 save = {
                     ArrayList(it.toList())
                 },
@@ -54,7 +55,8 @@ class QuestionaryActivity() : ComponentActivity() {
                     it.toMutableStateList()
                 }
             )) { questionary.questions.indices.shuffled().toMutableStateList() }
-            val stats = rememberSaveable(saver = Saver(
+            val stats = rememberSaveable(
+                saver = Saver(
                 save = {
                     ArrayList(listOf(it.value.correct, it.value.incorrect))
                 },
@@ -130,7 +132,7 @@ class QuestionaryActivity() : ComponentActivity() {
                         .padding(10.dp)
                         .weight(1f)
                 ) {
-                    val text = questionary[indexes[0]].text
+                    val text = questionary[indexes[0]].text.beautify()
                     text.split('\n').forEach {
                         Text(
                             text = it.trim(),
@@ -186,6 +188,17 @@ class QuestionaryActivity() : ComponentActivity() {
         }
     }
 }
+
+/**
+ * Makes typographic adjustments:
+ * - replaces a double minus with a dash
+ * - replaces a three periods with an ellipsis
+ * - replace a space before an ellipsis to a non-breakable space
+ */
+private fun String.beautify() = this
+    .replace("--", "—")
+    .replace("...", "…")
+    .replace(" …", " …")
 
 class Stat(val total: Int) {
     var correct: Int = 0
