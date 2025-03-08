@@ -4,7 +4,9 @@ import android.content.Intent
 import android.content.res.AssetManager
 import android.util.Xml
 import com.hurricup.cards.model.impl.Addition
+import com.hurricup.cards.model.impl.Division
 import com.hurricup.cards.model.impl.Multiplication
+import com.hurricup.cards.model.impl.Subtraction
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParser.END_DOCUMENT
 import org.xmlpull.v1.XmlPullParser.START_TAG
@@ -35,6 +37,8 @@ open class Questionary(val title: String) {
         fun generateAll(): List<Questionary> = listOf<Questionary>(
             Multiplication(),
             Addition(),
+            Division(),
+            Subtraction(),
         ).map { cache(it)!! }.toList()
 
         fun readAll(assetsManager: AssetManager): List<Questionary> =
