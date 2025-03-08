@@ -3,6 +3,7 @@ package com.hurricup.cards.model
 import android.content.Intent
 import android.content.res.AssetManager
 import android.util.Xml
+import com.hurricup.cards.model.impl.Multiplication
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParser.END_DOCUMENT
 import org.xmlpull.v1.XmlPullParser.START_TAG
@@ -10,8 +11,8 @@ import java.io.InputStream
 
 private const val INTENT_KEY = "questionary"
 
-class Questionary(val title: String) {
-    private val _questions: MutableList<Question> = mutableListOf()
+open class Questionary(val title: String) {
+    protected open val _questions: MutableList<Question> = mutableListOf()
     val questions
         get() = _questions.toList()
     val size
@@ -25,6 +26,14 @@ class Questionary(val title: String) {
         val cache: MutableMap<String, Questionary> = mutableMapOf()
 
         fun from(intent: Intent): Questionary = cache[intent.getStringExtra(INTENT_KEY)]!!
+
+        private fun cache(questionary: Questionary?): Questionary? = questionary?.also {
+            cache.put(it.title, it)
+        }
+
+        fun generateAll(): List<Questionary> = listOf<Questionary>(
+            Multiplication()
+        ).map { cache(it)!! }.toList()
 
         fun readAll(assetsManager: AssetManager): List<Questionary> =
             assetsManager.list("xml")?.flatMap {
@@ -54,9 +63,7 @@ class Questionary(val title: String) {
                     }
                 }
             }
-            return questionary?.also {
-                cache.put(it.title, it)
-            }
+            return cache(questionary)
         }
 
         private fun readQuestions(xmlParser: XmlPullParser): List<Question> {
