@@ -3,7 +3,7 @@ package com.hurricup.cards.model.impl
 import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
 
-class Multiplication : Questionary("Таблица умножения") {
+class Multiplication : Questionary("Умножение") {
     override val _questions: MutableList<Question> by lazy {
         val result = mutableListOf<Question>()
         for (i in 0..10) {
