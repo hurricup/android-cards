@@ -3,6 +3,7 @@ package com.hurricup.cards.model
 import android.content.Intent
 import android.content.res.AssetManager
 import android.util.Xml
+import com.hurricup.cards.model.impl.Addition
 import com.hurricup.cards.model.impl.Multiplication
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParser.END_DOCUMENT
@@ -32,7 +33,8 @@ open class Questionary(val title: String) {
         }
 
         fun generateAll(): List<Questionary> = listOf<Questionary>(
-            Multiplication()
+            Multiplication(),
+            Addition(),
         ).map { cache(it)!! }.toList()
 
         fun readAll(assetsManager: AssetManager): List<Questionary> =
