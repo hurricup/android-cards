@@ -34,7 +34,7 @@ open class Questionary(val title: String) {
             cache.put(it.title, it)
         }
 
-        fun generateAll(): List<Questionary> = listOf<Questionary>(
+        fun generateAll(): List<Questionary> = listOf(
             Multiplication(),
             Addition(),
             Division(),
