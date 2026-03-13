@@ -32,6 +32,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -132,6 +133,7 @@ class QuestionaryActivity() : ComponentActivity() {
                     }
                 }
 
+                val currentQuestion = questionary[indexes[0]]
                 Column(
                     horizontalAlignment = Alignment.Start,
                     verticalArrangement = Arrangement.Center,
@@ -140,7 +142,6 @@ class QuestionaryActivity() : ComponentActivity() {
                         .padding(10.dp)
                         .weight(1f)
                 ) {
-                    val currentQuestion = questionary[indexes[0]]
                     val questionText = currentQuestion.text.beautify()
                     questionText.split('\n').forEach {
                         Text(
@@ -172,14 +173,24 @@ class QuestionaryActivity() : ComponentActivity() {
                             }
                         }
                     }
-
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                ) {
+
+                val controlsModifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 64.dp)
+                    .wrapContentHeight().let {
+                        if (currentQuestion.answer != null && !answerRevealed.value) {
+                            it
+                                .alpha(0f)
+                                .clickable(false) {}
+                        } else {
+                            it
+                        }
+                    }
+
+
+                Row(modifier = controlsModifier) {
                     IconButton(
                         onClick = {
                             stats.value.correct++
