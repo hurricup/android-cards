@@ -161,7 +161,8 @@ class QuestionaryActivity() : ComponentActivity() {
                                     answerRevealed.value = true
                                 }
                         ) {
-                            answer.beautify().split('\n').forEach {
+                            val answerText = if( answerRevealed.value) answer else currentQuestion.text
+                            answerText.beautify().split('\n').forEach {
                                 Text(
                                     text = it.trim(),
                                     fontSize = 6.em,
