@@ -83,15 +83,17 @@ open class Questionary(val title: String) {
         }
 
         private fun readQuestion(xmlParser: XmlPullParser): Question? {
-            var question: Question? = null
+            var questionText: String? = null
+            var answerText: String? = null
             while (xmlParser.next() != XmlPullParser.END_TAG) {
                 if (xmlParser.eventType == START_TAG) {
                     when (xmlParser.name) {
-                        "text" -> question = Question(readText(xmlParser))
+                        "text" -> questionText = readText(xmlParser)
+                        "answer" -> answerText = readText(xmlParser)
                     }
                 }
             }
-            return question
+            return questionText?.let { Question(questionText, answerText) }
         }
 
         private fun readText(xmlParser: XmlPullParser): String {
