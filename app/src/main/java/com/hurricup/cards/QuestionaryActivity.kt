@@ -4,10 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
@@ -29,8 +32,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.hurricup.cards.model.Questionary
@@ -46,28 +53,29 @@ class QuestionaryActivity() : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val answerRevealed = rememberSaveable { mutableStateOf(false) }
             val indexes = rememberSaveable(
                 saver = Saver(
-                save = {
-                    ArrayList(it.toList())
-                },
-                restore = {
-                    it.toMutableStateList()
-                }
-            )) { questionary.questions.indices.shuffled().toMutableStateList() }
+                    save = {
+                        ArrayList(it.toList())
+                    },
+                    restore = {
+                        it.toMutableStateList()
+                    }
+                )) { questionary.questions.indices.shuffled().toMutableStateList() }
             val stats = rememberSaveable(
                 saver = Saver(
-                save = {
-                    ArrayList(listOf(it.value.correct, it.value.incorrect))
-                },
-                restore = {
-                    val result = Stat(questionary.size)
-                    result.correct = it[0]
-                    result.incorrect = it[1]
-                    mutableStateOf(result)
-                }
+                    save = {
+                        ArrayList(listOf(it.value.correct, it.value.incorrect))
+                    },
+                    restore = {
+                        val result = Stat(questionary.size)
+                        result.correct = it[0]
+                        result.incorrect = it[1]
+                        mutableStateOf(result)
+                    }
 
-            )) { mutableStateOf(Stat(questionary.size)) }
+                )) { mutableStateOf(Stat(questionary.size)) }
 
             Column(
                 verticalArrangement = Arrangement.Center,
@@ -132,15 +140,38 @@ class QuestionaryActivity() : ComponentActivity() {
                         .padding(10.dp)
                         .weight(1f)
                 ) {
-                    val text = questionary[indexes[0]].text.beautify()
-                    text.split('\n').forEach {
+                    val currentQuestion = questionary[indexes[0]]
+                    val questionText = currentQuestion.text.beautify()
+                    questionText.split('\n').forEach {
                         Text(
                             text = it.trim(),
                             fontSize = 6.em,
                             modifier = Modifier
-                                .wrapContentWidth()
+                                .wrapContentWidth(),
                         )
                     }
+
+                    currentQuestion.answer?.let { answer ->
+                        Spacer(modifier = Modifier.height(64.dp))
+                        Box(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .blur(if (answerRevealed.value) 0.dp else 16.dp)
+                                .clickable(enabled = !answerRevealed.value) {
+                                    answerRevealed.value = true
+                                }
+                        ) {
+                            answer.beautify().split('\n').forEach {
+                                Text(
+                                    text = it.trim(),
+                                    fontSize = 6.em,
+                                    modifier = Modifier
+                                        .wrapContentWidth()
+                                )
+                            }
+                        }
+                    }
+
                 }
 
                 Row(
@@ -155,6 +186,7 @@ class QuestionaryActivity() : ComponentActivity() {
                                 finish()
                             } else {
                                 indexes.removeAt(0)
+                                answerRevealed.value = false
                             }
                         }, modifier = Modifier
                             .weight(1f)
@@ -172,6 +204,7 @@ class QuestionaryActivity() : ComponentActivity() {
                                 finish()
                             } else {
                                 indexes.removeAt(0)
+                                answerRevealed.value = false
                             }
                         }, modifier = Modifier
                             .weight(1f)
