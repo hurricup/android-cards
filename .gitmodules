@@ -1,3 +1,0 @@
-[submodule "app/src/main/assets/xml"]
-	path = app/src/main/assets/xml
-	url = git@github.com:hurricup/android-cards-data.git

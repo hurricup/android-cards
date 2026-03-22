@@ -16,3 +16,4 @@ local.properties
 /gradle/gradle-daemon-jvm.properties
 /.idea/junie.xml
 /.idea/deploymentTargetSelector.xml
+app/src/main/assets/xml/*
