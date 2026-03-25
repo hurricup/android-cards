@@ -24,23 +24,23 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
 
 private val darkGreen = Color(0xFF66BB66)
@@ -83,55 +83,7 @@ class QuestionaryActivity() : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
-                Box(
-                    modifier = Modifier
-                        .padding(10.dp, 30.dp)
-                        .fillMaxWidth()
-
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(30.dp)
-                            .clip(shape = RoundedCornerShape(10.dp))
-                    ) {
-                        stats.value.let {
-                            if (it.correct > 0) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .weight(it.correctWeight)
-                                        .fillMaxHeight()
-                                        .background(darkGreen)
-                                ) {
-                                    Text(it.correct.toString())
-                                }
-                            }
-                            if (it.incorrect > 0) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .weight(it.incorrectWeight)
-                                        .fillMaxHeight()
-                                        .background(darkRed)
-                                ) {
-                                    Text(it.incorrect.toString())
-                                }
-                            }
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .weight(it.leftWeight)
-                                    .fillMaxHeight()
-                                    .background(darkGray)
-                            ) {
-                                Text(it.left.toString())
-                            }
-                        }
-                    }
-                }
+                progressBar(stats)
 
                 val currentQuestion = questionary[indexes[0]]
                 Column(
@@ -142,92 +94,166 @@ class QuestionaryActivity() : ComponentActivity() {
                         .padding(10.dp)
                         .weight(1f)
                 ) {
-                    val questionText = currentQuestion.text.beautify()
-                    questionText.split('\n').forEach {
-                        Text(
-                            text = it.trim(),
-                            fontSize = 6.em,
-                            modifier = Modifier
-                                .wrapContentWidth(),
-                        )
-                    }
+                    Question(currentQuestion)
 
-                    currentQuestion.answer?.let { answer ->
-                        Spacer(modifier = Modifier.height(64.dp))
-                        Box(
-                            modifier = Modifier
-                                .wrapContentWidth()
-                                .blur(if (answerRevealed.value) 0.dp else 16.dp)
-                                .clickable(enabled = !answerRevealed.value) {
-                                    answerRevealed.value = true
-                                }
-                        ) {
-                            val answerText = if( answerRevealed.value) answer else currentQuestion.text
-                            answerText.beautify().split('\n').forEach {
-                                Text(
-                                    text = it.trim(),
-                                    fontSize = 6.em,
-                                    modifier = Modifier
-                                        .wrapContentWidth()
-                                )
-                            }
-                        }
-                    }
+                    Answer(currentQuestion, answerRevealed)
                 }
 
+                Controls(currentQuestion, answerRevealed, stats, indexes)
+            }
+        }
+    }
 
-                val controlsModifier = Modifier
+    @Composable
+    private fun Controls(
+        currentQuestion: Question,
+        answerRevealed: MutableState<Boolean>,
+        stats: MutableState<Stat>,
+        indexes: SnapshotStateList<Int>
+    ) {
+        val controlsModifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight().let {
+                if (currentQuestion.answer != null && !answerRevealed.value) {
+                    it
+                        .alpha(0f)
+                        .clickable(false) {}
+                } else {
+                    it
+                }
+            }
+
+
+        Row(modifier = controlsModifier) {
+            IconButton(
+                onClick = {
+                    stats.value.correct++
+                    if (indexes.size == 1) {
+                        finish()
+                    } else {
+                        indexes.removeAt(0)
+                        answerRevealed.value = false
+                    }
+                }, modifier = Modifier
+                    .weight(1f)
+                    .size(100.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Done, "Right", tint = darkGreen,
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+            IconButton(
+                onClick = {
+                    stats.value.incorrect++
+                    if (indexes.size == 1) {
+                        finish()
+                    } else {
+                        indexes.removeAt(0)
+                        answerRevealed.value = false
+                    }
+                }, modifier = Modifier
+                    .weight(1f)
+                    .size(100.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Close, "Wrong", tint = darkRed,
+                    modifier = Modifier.size(80.dp)
+                )
+            }
+
+        }
+    }
+
+    @Composable
+    private fun Answer(
+        currentQuestion: Question,
+        answerRevealed: MutableState<Boolean>
+    ) {
+        currentQuestion.answer?.let { answer ->
+            Spacer(modifier = Modifier.height(64.dp))
+            Box(
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .blur(if (answerRevealed.value) 0.dp else 16.dp)
+                    .clickable(enabled = !answerRevealed.value) {
+                        answerRevealed.value = true
+                    }
+            ) {
+                val answerText = if (answerRevealed.value) answer else currentQuestion.text
+                answerText.beautify().split('\n').forEach {
+                    Text(
+                        text = it.trim(),
+                        fontSize = 6.em,
+                        modifier = Modifier
+                            .wrapContentWidth()
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun Question(currentQuestion: Question) {
+        val questionText = currentQuestion.text.beautify()
+        questionText.split('\n').forEach {
+            Text(
+                text = it.trim(),
+                fontSize = 6.em,
+                modifier = Modifier
+                    .wrapContentWidth(),
+            )
+        }
+    }
+
+    @Composable
+    private fun progressBar(stats: MutableState<Stat>) {
+        Box(
+            modifier = Modifier
+                .padding(10.dp, 30.dp)
+                .fillMaxWidth()
+
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 64.dp)
-                    .wrapContentHeight().let {
-                        if (currentQuestion.answer != null && !answerRevealed.value) {
-                            it
-                                .alpha(0f)
-                                .clickable(false) {}
-                        } else {
-                            it
+                    .height(30.dp)
+                    .clip(shape = RoundedCornerShape(10.dp))
+            ) {
+                stats.value.let {
+                    if (it.correct > 0) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(it.correctWeight)
+                                .fillMaxHeight()
+                                .background(darkGreen)
+                        ) {
+                            Text(it.correct.toString())
                         }
                     }
-
-
-                Row(modifier = controlsModifier) {
-                    IconButton(
-                        onClick = {
-                            stats.value.correct++
-                            if (indexes.size == 1) {
-                                finish()
-                            } else {
-                                indexes.removeAt(0)
-                                answerRevealed.value = false
-                            }
-                        }, modifier = Modifier
-                            .weight(1f)
-                            .size(100.dp)
-                    ) {
-                        Icon(
-                            Icons.Filled.Done, "Right", tint = darkGreen,
-                            modifier = Modifier.size(80.dp)
-                        )
+                    if (it.incorrect > 0) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(it.incorrectWeight)
+                                .fillMaxHeight()
+                                .background(darkRed)
+                        ) {
+                            Text(it.incorrect.toString())
+                        }
                     }
-                    IconButton(
-                        onClick = {
-                            stats.value.incorrect++
-                            if (indexes.size == 1) {
-                                finish()
-                            } else {
-                                indexes.removeAt(0)
-                                answerRevealed.value = false
-                            }
-                        }, modifier = Modifier
-                            .weight(1f)
-                            .size(100.dp)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(it.leftWeight)
+                            .fillMaxHeight()
+                            .background(darkGray)
                     ) {
-                        Icon(
-                            Icons.Filled.Close, "Wrong", tint = darkRed,
-                            modifier = Modifier.size(80.dp)
-                        )
+                        Text(it.left.toString())
                     }
-
                 }
             }
         }
