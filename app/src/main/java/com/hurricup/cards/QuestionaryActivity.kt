@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,9 +26,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
@@ -83,11 +84,11 @@ class QuestionaryActivity() : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
-                progressBar(stats)
+                ProgressBar(stats)
 
                 val currentQuestion = questionary[indexes[0]]
                 Column(
-                    horizontalAlignment = Alignment.Start,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier
                         .wrapContentWidth()
@@ -95,11 +96,9 @@ class QuestionaryActivity() : ComponentActivity() {
                         .weight(1f)
                 ) {
                     Question(currentQuestion)
-
+                    Controls(currentQuestion, answerRevealed, stats, indexes)
                     Answer(currentQuestion, answerRevealed)
                 }
-
-                Controls(currentQuestion, answerRevealed, stats, indexes)
             }
         }
     }
@@ -111,21 +110,21 @@ class QuestionaryActivity() : ComponentActivity() {
         stats: MutableState<Stat>,
         indexes: SnapshotStateList<Int>
     ) {
+        val isDisabled = currentQuestion.answer != null && !answerRevealed.value
         val controlsModifier = Modifier
             .fillMaxWidth()
+            .padding(10.dp, vertical = 30.dp)
             .wrapContentHeight().let {
-                if (currentQuestion.answer != null && !answerRevealed.value) {
-                    it
-                        .alpha(0f)
-                        .clickable(false) {}
+                if (isDisabled) {
+                    it.alpha(0f)
                 } else {
                     it
                 }
             }
 
-
         Row(modifier = controlsModifier) {
             IconButton(
+                enabled = !isDisabled,
                 onClick = {
                     stats.value.correct++
                     if (indexes.size == 1) {
@@ -144,6 +143,7 @@ class QuestionaryActivity() : ComponentActivity() {
                 )
             }
             IconButton(
+                enabled = !isDisabled,
                 onClick = {
                     stats.value.incorrect++
                     if (indexes.size == 1) {
@@ -161,7 +161,6 @@ class QuestionaryActivity() : ComponentActivity() {
                     modifier = Modifier.size(80.dp)
                 )
             }
-
         }
     }
 
@@ -171,10 +170,11 @@ class QuestionaryActivity() : ComponentActivity() {
         answerRevealed: MutableState<Boolean>
     ) {
         currentQuestion.answer?.let { answer ->
-            Spacer(modifier = Modifier.height(64.dp))
-            Box(
+            Row(
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .wrapContentWidth()
+                    .fillMaxWidth()
                     .blur(if (answerRevealed.value) 0.dp else 16.dp)
                     .clickable(enabled = !answerRevealed.value) {
                         answerRevealed.value = true
@@ -186,6 +186,7 @@ class QuestionaryActivity() : ComponentActivity() {
                         text = it.trim(),
                         fontSize = 6.em,
                         modifier = Modifier
+                            .padding(horizontal = 0.dp, vertical = 20.dp)
                             .wrapContentWidth()
                     )
                 }
@@ -201,13 +202,14 @@ class QuestionaryActivity() : ComponentActivity() {
                 text = it.trim(),
                 fontSize = 6.em,
                 modifier = Modifier
+                    .padding(horizontal = 0.dp, vertical = 20.dp)
                     .wrapContentWidth(),
             )
         }
     }
 
     @Composable
-    private fun progressBar(stats: MutableState<Stat>) {
+    private fun ProgressBar(stats: MutableState<Stat>) {
         Box(
             modifier = Modifier
                 .padding(10.dp, 30.dp)
@@ -272,8 +274,8 @@ private fun String.beautify() = this
     .replace(" …", " …")
 
 class Stat(val total: Int) {
-    var correct: Int = 0
-    var incorrect: Int = 0
+    var correct: Int by mutableStateOf(0)
+    var incorrect: Int by mutableStateOf(0)
 
     val done: Int
         get() = correct + incorrect
