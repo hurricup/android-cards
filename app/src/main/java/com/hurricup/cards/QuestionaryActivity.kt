@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
+import com.hurricup.cards.model.QuestionaryStats
 
 private val darkGreen = Color(0xFF66BB66)
 private val darkRed = Color(0xFFBB6666)
@@ -51,6 +52,10 @@ private val darkGray = Color(0xFFD5D5D5)
 class QuestionaryActivity() : ComponentActivity() {
     private val questionary: Questionary
         get() = Questionary.from(intent)
+
+    private val stats: QuestionaryStats by lazy {
+        QuestionaryStats.forQuestionary(filesDir, questionary.title)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +69,7 @@ class QuestionaryActivity() : ComponentActivity() {
                     restore = {
                         it.toMutableStateList()
                     }
-                )) { questionary.questions.indices.shuffled().toMutableStateList() }
+                )) { stats.sortedIndices(questionary.questions).toMutableStateList() }
             val stats = rememberSaveable(
                 saver = Saver(
                     save = {
@@ -126,6 +131,7 @@ class QuestionaryActivity() : ComponentActivity() {
             IconButton(
                 enabled = !isDisabled,
                 onClick = {
+                    this@QuestionaryActivity.stats.recordAttempt(currentQuestion.text, true)
                     stats.value.correct++
                     if (indexes.size == 1) {
                         finish()
@@ -145,6 +151,7 @@ class QuestionaryActivity() : ComponentActivity() {
             IconButton(
                 enabled = !isDisabled,
                 onClick = {
+                    this@QuestionaryActivity.stats.recordAttempt(currentQuestion.text, false)
                     stats.value.incorrect++
                     if (indexes.size == 1) {
                         finish()
