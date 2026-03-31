@@ -40,3 +40,10 @@ All use lazy initialization. No answers provided in generated questions — stud
 - Right/wrong buttons disabled until answer revealed
 - Text beautification: `--` → `—`, `...` → `…`
 - Dynamic color scheme on Android 12+
+
+## Coding Directives
+
+- Keep diffs clean and focused. Don't rename existing variables or refactor surrounding code unless directly required by the task.
+- Don't add extra steps beyond what was asked.
+- All user-facing strings in English.
+- Prefer small atomic commits with one logical change each. Don't bundle unrelated changes.
