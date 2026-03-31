@@ -2,6 +2,7 @@ package com.hurricup.cards.model
 
 import android.content.Intent
 import android.content.res.AssetManager
+import android.util.Log
 import android.util.Xml
 import com.hurricup.cards.model.impl.Addition
 import com.hurricup.cards.model.impl.Division
@@ -41,10 +42,16 @@ open class Questionary(val title: String) {
             Subtraction(),
         ).map { cache(it)!! }.toList()
 
-        fun readAll(assetsManager: AssetManager): List<Questionary> =
-            assetsManager.list("xml")?.flatMap {
-                assetsManager.open("xml/$it").use { readFile(it).asSequence() }
-            }?.toList() ?: emptyList()
+        fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> =
+            assetsManager.list("xml")?.flatMap { fileName ->
+                try {
+                    assetsManager.open("xml/$fileName").use { readFile(it) }
+                } catch (e: Exception) {
+                    Log.e("Questionary", "Error reading $fileName", e)
+                    onError("Error reading $fileName: ${e.message}")
+                    emptyList()
+                }
+            } ?: emptyList()
 
         private fun readFile(inputStream: InputStream): List<Questionary> {
             val xmlParser = Xml.newPullParser()

@@ -2,6 +2,7 @@ package com.hurricup.cards
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,7 +27,9 @@ import com.hurricup.cards.ui.theme.AndroidCardsTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val questionaries = Questionary.readAll(assets) + Questionary.generateAll()
+        val questionaries = Questionary.readAll(assets) { error ->
+            Toast.makeText(this, error, Toast.LENGTH_LONG).show()
+        } + Questionary.generateAll()
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
