@@ -209,7 +209,7 @@ class QuestionaryActivity() : ComponentActivity() {
                 text = it.trim(),
                 fontSize = 6.em,
                 modifier = Modifier
-                    .padding(horizontal = 0.dp, vertical = 20.dp)
+                    .padding(horizontal = 0.dp, vertical = 10.dp)
                     .wrapContentWidth(),
             )
         }

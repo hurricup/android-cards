@@ -105,7 +105,7 @@ open class Questionary(val title: String) {
 
         private fun readText(xmlParser: XmlPullParser): String {
             xmlParser.next()
-            val result = xmlParser.text
+            val result = xmlParser.text.trim()
             xmlParser.nextTag()
             return result
         }
