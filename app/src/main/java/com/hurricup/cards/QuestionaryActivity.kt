@@ -253,14 +253,16 @@ class QuestionaryActivity() : ComponentActivity() {
                             Text(it.incorrect.toString())
                         }
                     }
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .weight(it.leftWeight)
-                            .fillMaxHeight()
-                            .background(darkGray)
-                    ) {
-                        Text(it.left.toString())
+                    if (it.left > 0) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .weight(it.leftWeight)
+                                .fillMaxHeight()
+                                .background(darkGray)
+                        ) {
+                            Text(it.left.toString())
+                        }
                     }
                 }
             }
