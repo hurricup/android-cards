@@ -177,10 +177,9 @@ class QuestionaryActivity() : ComponentActivity() {
         answerRevealed: MutableState<Boolean>
     ) {
         currentQuestion.answer?.let { answer ->
-            Row(
-                horizontalArrangement = Arrangement.Center,
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .wrapContentWidth()
                     .fillMaxWidth()
                     .blur(if (answerRevealed.value) 0.dp else 16.dp)
                     .clickable(enabled = !answerRevealed.value) {
