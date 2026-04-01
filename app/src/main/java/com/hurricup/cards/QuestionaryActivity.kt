@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.hurricup.cards.model.Question
@@ -195,9 +196,10 @@ class QuestionaryActivity() : ComponentActivity() {
                     Text(
                         text = it.trim(),
                         fontSize = 6.em,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(horizontal = 0.dp, vertical = 20.dp)
-                            .wrapContentWidth()
                     )
                 }
             }
@@ -211,9 +213,10 @@ class QuestionaryActivity() : ComponentActivity() {
             Text(
                 text = it.trim(),
                 fontSize = 6.em,
+                textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .padding(horizontal = 0.dp, vertical = 10.dp)
-                    .wrapContentWidth(),
+                    .fillMaxWidth()
+                    .padding(horizontal = 0.dp, vertical = 10.dp),
             )
         }
     }
