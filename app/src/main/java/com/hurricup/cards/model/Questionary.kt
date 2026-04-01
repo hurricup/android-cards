@@ -5,6 +5,7 @@ import android.content.res.AssetManager
 import android.util.Log
 import android.util.Xml
 import com.hurricup.cards.model.impl.Addition
+import com.hurricup.cards.model.impl.CompositeQuestionary
 import com.hurricup.cards.model.impl.Division
 import com.hurricup.cards.model.impl.Multiplication
 import com.hurricup.cards.model.impl.Subtraction
@@ -36,11 +37,9 @@ open class Questionary(val title: String) {
         }
 
         fun generateAll(): List<Questionary> = listOf(
-            Multiplication(),
-            Addition(),
-            Division(),
-            Subtraction(),
-        ).map { cache(it)!! }.toList()
+            CompositeQuestionary("Сложение и Вычитание", listOf(Addition(), Subtraction())),
+            CompositeQuestionary("Умножение и Деление", listOf(Multiplication(), Division())),
+        ).map { cache(it)!! }
 
         fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> =
             assetsManager.list("xml")?.flatMap { fileName ->
