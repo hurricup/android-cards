@@ -37,8 +37,8 @@ open class Questionary(val title: String) {
         }
 
         fun generateAll(): List<Questionary> = listOf(
-            CompositeQuestionary("Сложение и Вычитание", listOf(Addition(), Subtraction())),
-            CompositeQuestionary("Умножение и Деление", listOf(Multiplication(), Division())),
+            CompositeQuestionary("+/−", listOf(Addition(), Subtraction())),
+            CompositeQuestionary("×/÷", listOf(Multiplication(), Division())),
         ).map { cache(it)!! }
 
         fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> =
