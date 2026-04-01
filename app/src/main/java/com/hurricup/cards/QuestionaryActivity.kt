@@ -2,6 +2,7 @@ package com.hurricup.cards
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,9 +22,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -60,6 +63,7 @@ class QuestionaryActivity() : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            ExitConfirmation()
             val answerRevealed = rememberSaveable { mutableStateOf(false) }
             val indexes = rememberSaveable(
                 saver = Saver(
@@ -210,6 +214,24 @@ class QuestionaryActivity() : ComponentActivity() {
                 modifier = Modifier
                     .padding(horizontal = 0.dp, vertical = 10.dp)
                     .wrapContentWidth(),
+            )
+        }
+    }
+
+    @Composable
+    private fun ExitConfirmation() {
+        var showExitDialog by rememberSaveable { mutableStateOf(false) }
+        BackHandler { showExitDialog = true }
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Abort exercise?") },
+                confirmButton = {
+                    TextButton(onClick = { finish() }) { Text("Yes") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) { Text("No") }
+                }
             )
         }
     }
