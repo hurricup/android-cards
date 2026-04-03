@@ -58,6 +58,21 @@ class QuestionaryStats(private val file: File) {
 
     fun lastAsked(questionText: String): Long = lastAsked[questionText] ?: 0L
 
+    fun distribution(questionary: Questionary): Distribution {
+        val now = System.currentTimeMillis()
+        var mistakes = 0
+        var new = 0
+        var known = 0
+        for (q in questionary.questions) {
+            when {
+                !hasAttempts(q.text) -> new++
+                score(q.text, now) > 0 -> mistakes++
+                else -> known++
+            }
+        }
+        return Distribution(mistakes, known, new)
+    }
+
     fun selectSession(questions: List<Question>, sessionSize: Int = DEFAULT_SESSION_SIZE): List<Int> {
         val now = System.currentTimeMillis()
         val size = minOf(sessionSize, questions.size)
@@ -188,6 +203,10 @@ class QuestionaryStats(private val file: File) {
             return QuestionaryStats(File(filesDir, "stats/$safeName"))
         }
     }
+}
+
+data class Distribution(val mistakes: Int, val known: Int, val new: Int) {
+    val total get() = mistakes + known + new
 }
 
 private data class Attempt(val timestamp: Long, val correct: Boolean)
