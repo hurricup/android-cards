@@ -13,6 +13,12 @@
 - Ability to compose multiple questionnaires into one
 - User can select several questionnaires and run them as a single combined session
 
+## Questionary health metric on main screen
+- Show per-questionary stats next to each title: mistakes / known / new percentages
+- Uses the same three-pile classification as session selection (score > 0 / score ≤ 0 / no attempts)
+- Coverage naturally drops as stats decay and get pruned — signals need to practice
+- Display as compact bar or three numbers
+
 ## Stats improvements
 - Separate scoring window from retention window (e.g. score based on last week, but keep data for a month)
 - Configurable scoring/retention windows as user settings
