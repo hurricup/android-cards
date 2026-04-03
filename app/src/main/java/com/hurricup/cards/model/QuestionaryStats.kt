@@ -34,16 +34,21 @@ private const val JITTER_RANGE = 0.3
  */
 class QuestionaryStats(private val file: File) {
     private val attempts: MutableMap<String, MutableList<Attempt>> = mutableMapOf()
+    private val lastAsked: MutableMap<String, Long> = mutableMapOf()
 
     init {
         load()
     }
 
     fun recordAttempt(questionText: String, correct: Boolean) {
+        val now = System.currentTimeMillis()
         val list = attempts.getOrPut(questionText) { mutableListOf() }
-        list.add(Attempt(System.currentTimeMillis(), correct))
+        list.add(Attempt(now, correct))
+        lastAsked[questionText] = now
         save()
     }
+
+    fun lastAsked(questionText: String): Long = lastAsked[questionText] ?: 0L
 
     fun sortedIndices(questions: List<Question>): List<Int> {
         val now = System.currentTimeMillis()
@@ -69,7 +74,12 @@ class QuestionaryStats(private val file: File) {
         val now = System.currentTimeMillis()
         val maxAgeMs = MAX_AGE_DAYS * 24 * 60 * 60 * 1000
         for (key in json.keys()) {
-            val arr = json.getJSONArray(key)
+            val entry = json.get(key)
+            val arr = when (entry) {
+                is JSONArray -> entry // legacy format
+                is JSONObject -> entry.getJSONArray("attempts")
+                else -> continue
+            }
             val list = mutableListOf<Attempt>()
             for (i in 0 until arr.length()) {
                 val obj = arr.getJSONObject(i)
@@ -81,12 +91,18 @@ class QuestionaryStats(private val file: File) {
             if (list.isNotEmpty()) {
                 attempts[key] = list
             }
+            if (entry is JSONObject && entry.has("lastAsked")) {
+                lastAsked[key] = entry.getLong("lastAsked")
+            } else if (list.isNotEmpty()) {
+                lastAsked[key] = list.maxOf { it.timestamp }
+            }
         }
     }
 
     private fun save() {
         val json = JSONObject()
         for ((key, list) in attempts) {
+            val entry = JSONObject()
             val arr = JSONArray()
             for (attempt in list) {
                 arr.put(JSONObject().apply {
@@ -94,7 +110,9 @@ class QuestionaryStats(private val file: File) {
                     put("ok", attempt.correct)
                 })
             }
-            json.put(key, arr)
+            entry.put("attempts", arr)
+            lastAsked[key]?.let { entry.put("lastAsked", it) }
+            json.put(key, entry)
         }
         file.parentFile?.mkdirs()
         file.writeText(json.toString())
