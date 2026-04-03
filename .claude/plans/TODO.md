@@ -18,9 +18,22 @@
 - Configurable scoring/retention windows as user settings
 - Optional per-question stat display during exercise (configurable)
 
+## Session question selection algorithm
+- Session size: default 100 (or all questions if fewer). Global config with per-questionary override (later).
+- Split all questions into 3 piles based on stats:
+  - **Mistakes**: positive score (recently wrong)
+  - **New**: no stats at all
+  - **Known**: zero or negative score, sorted by last asked date ascending (oldest first)
+- Take up to 70% of session size from mistakes (sorted by score descending — worst first)
+- Split remaining slots 50/50 between new (random) and known (oldest first)
+- If one pile can't fill its half, the other takes the leftover slots
+- Shuffle the final list
+- Track last asked date per question in stats (alongside attempt log)
+- Percentages (70% mistakes cap, 50/50 new/known split) hardcoded for now, configurable later
+
 ## Exercise session features
 - Elapsed timer for the questionary
-- Configurable session limits: by time or by number of questions
+- Configurable session limits: by time
 - Go back to previous answer to correct it (sometimes tap right instead of wrong and vice versa) — questionable, needs UX thought
 
 ## Statistics page
