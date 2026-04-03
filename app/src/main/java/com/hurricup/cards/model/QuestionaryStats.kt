@@ -9,26 +9,34 @@ private const val HALFLIFE_DAYS = 7.0
 private const val MAX_AGE_DAYS = 28.0
 private const val RIGHT_WEIGHT = -0.5
 private const val WRONG_WEIGHT = 1.0
-private const val JITTER_RANGE = 0.3
+private const val DEFAULT_SESSION_SIZE = 100
+private const val MISTAKES_CAP = 0.7
+private const val NEW_KNOWN_SPLIT = 0.5
 
 /**
- * Tracks per-question answer history and uses it to order questions for the next session.
+ * Tracks per-question answer history and uses it to compose learning sessions.
  *
- * Each answer (right or wrong) is recorded with a timestamp. When ordering questions for a new
- * session, every past attempt contributes to the question's score with a weight that decays
- * exponentially over time (halflife = [HALFLIFE_DAYS] days):
+ * Each answer (right or wrong) is recorded with a timestamp. Every past attempt contributes to
+ * the question's score with a weight that decays exponentially over time
+ * (halflife = [HALFLIFE_DAYS] days):
  *
  *   score = Σ  weight × e^(-age_days / halflife)
  *
  * where weight is [WRONG_WEIGHT] (+1.0) for a wrong answer and [RIGHT_WEIGHT] (-0.5) for a
- * correct one. This means:
- *   - Recently wrong questions get high positive scores and appear first.
- *   - Correctly answered questions get negative scores and sink to the end.
- *   - New questions (no history) score 0 and land in the middle.
- *   - Old mistakes gradually dissolve — after [MAX_AGE_DAYS] days they are pruned entirely.
+ * correct one. Attempts older than [MAX_AGE_DAYS] days are pruned on load.
  *
- * A small random jitter ([JITTER_RANGE]) is added to each score so that questions with similar
- * scores appear in a different order every session.
+ * Session composition ([selectSession]):
+ *   1. Questions are split into three piles by score:
+ *      - **Mistakes** (score > 0): recently wrong questions.
+ *      - **New** (no attempts): never seen before.
+ *      - **Known** (score ≤ 0): recently correct or well-learned.
+ *   2. Up to [MISTAKES_CAP] (70%) of session slots go to mistakes, worst first.
+ *   3. Remaining slots are split [NEW_KNOWN_SPLIT] (50/50) between new (random order)
+ *      and known (oldest last-asked first).
+ *   4. If one pile is too small, the other fills the leftover slots.
+ *   5. The final list is shuffled.
+ *
+ * Also tracks last-asked timestamp per question for the known pile ordering.
  *
  * Stats are persisted as a JSON file per questionary in the app's internal storage.
  */
@@ -50,12 +58,68 @@ class QuestionaryStats(private val file: File) {
 
     fun lastAsked(questionText: String): Long = lastAsked[questionText] ?: 0L
 
-    fun sortedIndices(questions: List<Question>): List<Int> {
+    fun selectSession(questions: List<Question>, sessionSize: Int = DEFAULT_SESSION_SIZE): List<Int> {
         val now = System.currentTimeMillis()
-        return questions.indices
-            .map { i -> i to score(questions[i].text, now) + Math.random() * JITTER_RANGE }
-            .sortedByDescending { it.second }
-            .map { it.first }
+        val size = minOf(sessionSize, questions.size)
+
+        val scored = questions.indices.map { i -> i to score(questions[i].text, now) }
+        val mistakes = mutableListOf<Int>()
+        val new = mutableListOf<Int>()
+        val known = mutableListOf<Int>()
+
+        for ((i, s) in scored) {
+            val text = questions[i].text
+            when {
+                !hasAttempts(text) -> new.add(i)
+                s > 0 -> mistakes.add(i)
+                else -> known.add(i)
+            }
+        }
+
+        return composeSession(size, mistakes, new, known, questions, now)
+    }
+
+    private fun hasAttempts(questionText: String): Boolean = attempts.containsKey(questionText)
+
+    private fun composeSession(
+        size: Int,
+        mistakes: MutableList<Int>,
+        new: MutableList<Int>,
+        known: MutableList<Int>,
+        questions: List<Question>,
+        now: Long
+    ): List<Int> {
+        val result = mutableListOf<Int>()
+
+        // take up to 70% from mistakes, worst first
+        mistakes.sortByDescending { score(questions[it].text, now) }
+        val mistakesSlots = (size * MISTAKES_CAP).toInt()
+        result.addAll(mistakes.take(mistakesSlots))
+
+        val remaining = size - result.size
+
+        // split remaining 50/50 between new and known
+        new.shuffle()
+        known.sortBy { lastAsked(questions[it].text) }
+
+        val newSlots = (remaining * NEW_KNOWN_SPLIT).toInt()
+        val knownSlots = remaining - newSlots
+
+        val selectedNew = new.take(newSlots)
+        val selectedKnown = known.take(knownSlots)
+        result.addAll(selectedNew)
+        result.addAll(selectedKnown)
+
+        // fill leftover slots if one pile was short
+        val leftover = size - result.size
+        if (leftover > 0) {
+            val unusedNew = new.drop(selectedNew.size)
+            val unusedKnown = known.drop(selectedKnown.size)
+            result.addAll((unusedNew + unusedKnown).take(leftover))
+        }
+
+        result.shuffle()
+        return result
     }
 
     private fun score(questionText: String, now: Long): Double {

@@ -63,6 +63,8 @@ class QuestionaryActivity() : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val session = stats.selectSession(questionary.questions)
+        val sessionSize = session.size
         setContent {
             ExitConfirmation()
             val answerRevealed = rememberSaveable { mutableStateOf(false) }
@@ -74,20 +76,20 @@ class QuestionaryActivity() : ComponentActivity() {
                     restore = {
                         it.toMutableStateList()
                     }
-                )) { stats.sortedIndices(questionary.questions).toMutableStateList() }
+                )) { session.toMutableStateList() }
             val stats = rememberSaveable(
                 saver = Saver(
                     save = {
                         ArrayList(listOf(it.value.correct, it.value.incorrect))
                     },
                     restore = {
-                        val result = Stat(questionary.size)
+                        val result = Stat(sessionSize)
                         result.correct = it[0]
                         result.incorrect = it[1]
                         mutableStateOf(result)
                     }
 
-                )) { mutableStateOf(Stat(questionary.size)) }
+                )) { mutableStateOf(Stat(sessionSize)) }
 
             Column(
                 verticalArrangement = Arrangement.Center,
