@@ -37,6 +37,13 @@
 - Track last asked date per question in stats (alongside attempt log)
 - Percentages (70% mistakes cap, 50/50 new/known split) hardcoded for now, configurable later
 
+## Questionary options popup
+- "..." button or long press on questionary button opens a popup menu
+- Session size options: default, x2, x0.5 questions
+- For composite questionnaires: option to run sub-questionnaries separately
+  - Opens main activity filtered to show only the sub-questionnaries (like a subfolder)
+- Both features can share the same popup
+
 ## Exercise session features
 - Elapsed timer for the questionary
 - Configurable session limits: by time
