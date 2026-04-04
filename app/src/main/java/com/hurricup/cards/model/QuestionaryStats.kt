@@ -198,8 +198,8 @@ class QuestionaryStats(private val file: File) {
     }
 
     companion object {
-        fun forQuestionary(filesDir: File, title: String): QuestionaryStats {
-            val safeName = title.replace(Regex("[^\\w]"), "_") + ".json"
+        fun forQuestionary(filesDir: File, questionary: Questionary): QuestionaryStats {
+            val safeName = questionary.id.replace(Regex("[^\\w]"), "_") + ".json"
             return QuestionaryStats(File(filesDir, "stats/$safeName"))
         }
     }

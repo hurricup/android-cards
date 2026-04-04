@@ -61,7 +61,7 @@ class QuestionaryActivity() : ComponentActivity() {
         get() = Questionary.from(intent)
 
     private val stats: QuestionaryStats by lazy {
-        QuestionaryStats.forQuestionary(filesDir, questionary.title)
+        QuestionaryStats.forQuestionary(filesDir, questionary)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

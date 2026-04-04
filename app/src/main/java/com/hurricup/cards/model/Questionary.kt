@@ -16,7 +16,7 @@ import java.io.InputStream
 
 private const val INTENT_KEY = "questionary"
 
-open class Questionary(val title: String) {
+open class Questionary(val title: String, val id: String = title) {
     protected open val _questions: MutableList<Question> = mutableListOf()
     val questions
         get() = _questions.toList()
@@ -25,7 +25,7 @@ open class Questionary(val title: String) {
 
     operator fun get(index: Int) = _questions[index]
 
-    fun passWith(intent: Intent) = intent.putExtra(INTENT_KEY, title)
+    fun passWith(intent: Intent) = intent.putExtra(INTENT_KEY, id)
 
     companion object {
         val cache: MutableMap<String, Questionary> = mutableMapOf()
@@ -33,7 +33,7 @@ open class Questionary(val title: String) {
         fun from(intent: Intent): Questionary = cache[intent.getStringExtra(INTENT_KEY)]!!
 
         private fun cache(questionary: Questionary?): Questionary? = questionary?.also {
-            cache.put(it.title, it)
+            cache.put(it.id, it)
         }
 
         fun generateAll(): List<Questionary> = listOf(
@@ -66,16 +66,23 @@ open class Questionary(val title: String) {
         }
 
         private fun readQuestionary(xmlParser: XmlPullParser): Questionary? {
-            var questionary: Questionary? = null
+            var title: String? = null
+            var id: String? = null
+            var questions: List<Question> = emptyList()
             while (xmlParser.next() != XmlPullParser.END_TAG) {
                 if (xmlParser.eventType == START_TAG) {
                     when (xmlParser.name) {
-                        "title" -> questionary = Questionary(readText(xmlParser))
-                        "questions" -> questionary!!._questions += readQuestions(xmlParser)
+                        "title" -> title = readText(xmlParser)
+                        "id" -> id = readText(xmlParser)
+                        "questions" -> questions = readQuestions(xmlParser)
                     }
                 }
             }
-            return cache(questionary)
+            return title?.let {
+                val q = Questionary(it, id ?: it)
+                q._questions += questions
+                cache(q)
+            }
         }
 
         private fun readQuestions(xmlParser: XmlPullParser): List<Question> {

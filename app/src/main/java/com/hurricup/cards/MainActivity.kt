@@ -76,8 +76,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         distributions.value = questionaries.associate { q ->
-            val stats = QuestionaryStats.forQuestionary(filesDir, q.title)
-            q.title to stats.distribution(q)
+            val stats = QuestionaryStats.forQuestionary(filesDir, q)
+            q.id to stats.distribution(q)
         }
     }
 }
@@ -97,7 +97,7 @@ fun Questionaries(
             .fillMaxSize(1f)
     ) {
         for (questionary in questionaries) {
-            val dist = distributions[questionary.title]
+            val dist = distributions[questionary.id]
             val half = DEFAULT_SESSION_SIZE / 2
             val double = DEFAULT_SESSION_SIZE * 2
             fun launch(sessionSize: Int) {
