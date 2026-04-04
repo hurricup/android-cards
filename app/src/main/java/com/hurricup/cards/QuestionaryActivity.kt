@@ -45,9 +45,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
 import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
 import com.hurricup.cards.model.QuestionaryStats
+
+private const val SESSION_SIZE_KEY = "session_size"
 
 private val darkGreen = Color(0xFF66BB66)
 private val darkRed = Color(0xFFBB6666)
@@ -63,7 +66,8 @@ class QuestionaryActivity() : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val session = stats.selectSession(questionary.questions)
+        val requestedSize = intent.getIntExtra(SESSION_SIZE_KEY, DEFAULT_SESSION_SIZE)
+        val session = stats.selectSession(questionary.questions, requestedSize)
         val sessionSize = session.size
         setContent {
             ExitConfirmation()
@@ -230,7 +234,7 @@ class QuestionaryActivity() : ComponentActivity() {
         if (showExitDialog) {
             AlertDialog(
                 onDismissRequest = { showExitDialog = false },
-                title = { Text("Abort exercise?") },
+                title = { Text("Abort the exercise?") },
                 confirmButton = {
                     TextButton(onClick = { finish() }) { Text("Yes") }
                 },

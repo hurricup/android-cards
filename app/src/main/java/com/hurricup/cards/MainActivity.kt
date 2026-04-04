@@ -18,10 +18,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
 import com.hurricup.cards.model.Distribution
 import com.hurricup.cards.model.Questionary
 import com.hurricup.cards.model.QuestionaryStats
@@ -92,17 +98,21 @@ fun Questionaries(
     ) {
         for (questionary in questionaries) {
             val dist = distributions[questionary.title]
+            val half = DEFAULT_SESSION_SIZE / 2
+            val double = DEFAULT_SESSION_SIZE * 2
+            fun launch(sessionSize: Int) {
+                Intent(mainActivity, QuestionaryActivity::class.java).also {
+                    questionary.passWith(it)
+                    it.putExtra("session_size", sessionSize)
+                    mainActivity.startActivity(it)
+                }
+            }
             TextButton(
                 border = ButtonDefaults.outlinedButtonBorder,
                 modifier = Modifier
                     .padding(10.dp)
                     .fillMaxWidth(0.9f),
-                onClick = {
-                    Intent(mainActivity, QuestionaryActivity::class.java).also {
-                        questionary.passWith(it)
-                        mainActivity.startActivity(it)
-                    }
-                }
+                onClick = { launch(DEFAULT_SESSION_SIZE) }
             ) {
                 if (dist != null) {
                     PieChart(dist)
@@ -115,7 +125,28 @@ fun Questionaries(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                SessionMenu(half, double) { launch(it) }
             }
+        }
+    }
+}
+
+@Composable
+private fun SessionMenu(half: Int, double: Int, onSelect: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.Filled.MoreVert, contentDescription = "Session options")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Sprint ($half)") },
+                onClick = { expanded = false; onSelect(half) }
+            )
+            DropdownMenuItem(
+                text = { Text("Marathon ($double)") },
+                onClick = { expanded = false; onSelect(double) }
+            )
         }
     }
 }

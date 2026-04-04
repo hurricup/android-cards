@@ -9,7 +9,7 @@ private const val HALFLIFE_DAYS = 7.0
 private const val MAX_AGE_DAYS = 28.0
 private const val RIGHT_WEIGHT = -0.5
 private const val WRONG_WEIGHT = 1.0
-private const val DEFAULT_SESSION_SIZE = 100
+const val DEFAULT_SESSION_SIZE = 50
 private const val MISTAKES_CAP = 0.7
 private const val NEW_KNOWN_SPLIT = 0.5
 
