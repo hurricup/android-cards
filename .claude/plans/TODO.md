@@ -35,7 +35,7 @@
 - Share button to export stats as an image for messengers etc.
 
 ## Stats backup & sync
-- **Phase 1**: Manual import/export of stats to a file (share sheet or file picker)
+- ~~**Phase 1**: Manual import/export of stats to a file~~ — done (zip export/import via settings gear)
 - **Phase 2**: Google Drive App Data folder for silent cloud backup
   - Sign in with Google once
   - Stats silently written to hidden app-specific Drive folder

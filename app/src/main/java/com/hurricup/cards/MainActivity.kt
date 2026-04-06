@@ -1,11 +1,13 @@
 package com.hurricup.cards
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +22,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -44,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
+import com.hurricup.cards.model.StatsBackup
+import java.io.File
 import com.hurricup.cards.model.Distribution
 import com.hurricup.cards.model.Questionary
 import com.hurricup.cards.model.QuestionaryStats
@@ -53,6 +60,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
     private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
 
+    private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        uri?.let { exportStats(it) }
+    }
+
+    private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { importStats(it) }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         questionaries = Questionary.readAll(assets) { error ->
@@ -61,7 +76,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    topBar = { SettingsBar() }
+                ) { innerPadding ->
                     Questionaries(
                         this,
                         questionaries,
@@ -73,12 +91,71 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun SettingsBar() {
+        var expanded by remember { mutableStateOf(false) }
+        TopAppBar(
+            title = {},
+            actions = {
+                Box {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Export stats") },
+                            onClick = { expanded = false; exportLauncher.launch("cards_stats.zip") }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import stats") },
+                            onClick = { expanded = false; importLauncher.launch("application/zip") }
+                        )
+                    }
+                }
+            }
+        )
+    }
+
+    private fun exportStats(uri: Uri) {
+        try {
+            val statsDir = File(filesDir, "stats")
+            if (!statsDir.exists() || statsDir.listFiles().isNullOrEmpty()) {
+                Toast.makeText(this, "No stats to export", Toast.LENGTH_SHORT).show()
+                return
+            }
+            contentResolver.openOutputStream(uri)?.use { output ->
+                StatsBackup.zip(statsDir, output)
+            }
+            Toast.makeText(this, "Stats exported", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun importStats(uri: Uri) {
+        try {
+            val statsDir = File(filesDir, "stats")
+            contentResolver.openInputStream(uri)?.use { input ->
+                StatsBackup.unzip(input, statsDir)
+            }
+            Toast.makeText(this, "Stats imported", Toast.LENGTH_SHORT).show()
+            refreshDistributions()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun refreshDistributions() {
         distributions.value = questionaries.associate { q ->
             val stats = QuestionaryStats.forQuestionary(filesDir, q)
             q.id to stats.distribution(q)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshDistributions()
     }
 }
 
