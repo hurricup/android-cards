@@ -42,6 +42,13 @@
   - On reinstall or new device: sign in, stats restored automatically
   - Enables cross-device sync
 
+## Questionary management
+- Remove bundled XML assets — clean install has only generated (math) questionnaires
+- Questionnaires stored in app's internal storage as XML files
+- Import/update: pick XML file from device, copies to internal storage. If id matches existing, replaces it.
+- Remove: delete questionary from internal storage (with confirmation)
+- Later: browse and download questionnaires directly from the GitHub data repo
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
