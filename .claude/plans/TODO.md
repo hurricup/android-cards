@@ -49,6 +49,11 @@
 - Remove: delete questionary from internal storage (with confirmation)
 - Later: browse and download questionnaires directly from the GitHub data repo
 
+## Session history
+- Record each completed session: questionary id, start time, finish time, session size, correct/incorrect counts
+- Persist as a log (JSON or similar)
+- Usage TBD — could feed into progress charts, streaks, or export
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
