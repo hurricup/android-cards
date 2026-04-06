@@ -34,6 +34,14 @@
 - Available after each question via button press and at the end of the lesson
 - Share button to export stats as an image for messengers etc.
 
+## Stats backup & sync
+- **Phase 1**: Manual import/export of stats to a file (share sheet or file picker)
+- **Phase 2**: Google Drive App Data folder for silent cloud backup
+  - Sign in with Google once
+  - Stats silently written to hidden app-specific Drive folder
+  - On reinstall or new device: sign in, stats restored automatically
+  - Enables cross-device sync
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
