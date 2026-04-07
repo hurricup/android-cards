@@ -3,6 +3,7 @@
 ## XML consistency tests
 - Add tests to check XML questionary files for consistency
 - Detect duplicate questions and answers within a questionary
+- Armenian text validation: catch ւ used without preceding ո (accounting for possible ՞ in between)
 
 ## Template-based dynamic questionnaires
 - Generate questions from templates at runtime, e.g. "I am in %city%", "I am in the %city%"
