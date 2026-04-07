@@ -54,6 +54,13 @@
 - Persist as a log (JSON or similar)
 - Usage TBD — could feed into progress charts, streaks, or export
 
+## Multiple choice mode
+- Alternative answer mode: instead of reveal, show answer options to pick from
+- Find questions with lexically similar text (e.g. same root/prefix like verb conjugations)
+- Use their answers as distractors alongside the correct one
+- Similarity: Levenshtein distance, common prefix, or similar
+- Distractors are plausible because they come from related questions
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
