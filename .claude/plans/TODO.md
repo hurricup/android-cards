@@ -62,6 +62,18 @@
 - Similarity: Levenshtein distance, common prefix, or similar
 - Distractors are plausible because they come from related questions
 
+## Written answer mode
+- User types answer into a text field instead of revealing it
+- Answer checked automatically: correct/wrong with correct answer shown
+- Good for kids — no self-assessment trust needed
+- Results screen at the end of session is important (parent checks results)
+
+## Answer mode system
+- Three modes: **Reveal** (current), **Selection** (multiple choice), **Written** (type answer)
+- Questionary can specify preferred mode in XML (e.g. `<mode>written</mode>`)
+- User can override mode from the questionary context menu
+- Default: reveal (current behavior)
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
