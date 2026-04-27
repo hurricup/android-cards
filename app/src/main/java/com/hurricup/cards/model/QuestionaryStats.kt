@@ -10,8 +10,7 @@ private const val MAX_AGE_DAYS = 28.0
 private const val RIGHT_WEIGHT = -0.5
 private const val WRONG_WEIGHT = 1.0
 const val DEFAULT_SESSION_SIZE = 50
-private const val MISTAKES_CAP = 0.7
-private const val NEW_KNOWN_SPLIT = 0.5
+private const val MISTAKES_CAP = 0.5
 
 /**
  * Tracks per-question answer history and uses it to compose learning sessions.
@@ -30,10 +29,9 @@ private const val NEW_KNOWN_SPLIT = 0.5
  *      - **Mistakes** (score > 0): recently wrong questions.
  *      - **New** (no attempts): never seen before.
  *      - **Known** (score ≤ 0): recently correct or well-learned.
- *   2. Up to [MISTAKES_CAP] (70%) of session slots go to mistakes, worst first.
- *   3. Remaining slots are split [NEW_KNOWN_SPLIT] (50/50) between new (random order)
- *      and known (oldest last-asked first).
- *   4. If one pile is too small, the other fills the leftover slots.
+ *   2. Up to [MISTAKES_CAP] (50%) of session slots go to mistakes, worst first.
+ *   3. Remaining slots are filled from new (random order).
+ *   4. If still slots left, filled from known (oldest last-asked first).
  *   5. The final list is shuffled.
  *
  * Also tracks last-asked timestamp per question for the known pile ordering.
@@ -106,31 +104,19 @@ class QuestionaryStats(private val file: File) {
     ): List<Int> {
         val result = mutableListOf<Int>()
 
-        // take up to 70% from mistakes, worst first
+        // up to 50% from mistakes, worst first
         mistakes.sortByDescending { score(questions[it].text, now) }
         val mistakesSlots = (size * MISTAKES_CAP).toInt()
         result.addAll(mistakes.take(mistakesSlots))
 
-        val remaining = size - result.size
-
-        // split remaining 50/50 between new and known
+        // fill rest with new, in random order
         new.shuffle()
-        known.sortBy { lastAsked(questions[it].text) }
+        result.addAll(new.take(size - result.size))
 
-        val newSlots = (remaining * NEW_KNOWN_SPLIT).toInt()
-        val knownSlots = remaining - newSlots
-
-        val selectedNew = new.take(newSlots)
-        val selectedKnown = known.take(knownSlots)
-        result.addAll(selectedNew)
-        result.addAll(selectedKnown)
-
-        // fill leftover slots if one pile was short
-        val leftover = size - result.size
-        if (leftover > 0) {
-            val unusedNew = new.drop(selectedNew.size)
-            val unusedKnown = known.drop(selectedKnown.size)
-            result.addAll((unusedNew + unusedKnown).take(leftover))
+        // if still slots left, take oldest known
+        if (result.size < size) {
+            known.sortBy { lastAsked(questions[it].text) }
+            result.addAll(known.take(size - result.size))
         }
 
         result.shuffle()
