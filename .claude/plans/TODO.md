@@ -74,6 +74,19 @@
 - User can override mode from the questionary context menu
 - Default: reveal (current behavior)
 
+## Questionary processors (variant generation)
+- Global registry of processors
+- Each processor is fed every questionary and returns a collection of derivative questions
+- App merges the base questionary with all derivatives into the final question set
+- Use case: an Armenian-verbs processor recognizes infinitives (սիրել) and produces:
+  - Negation: չսիրել
+  - Present tense conjugations: ես սիրում եմ, դու սիրում ես, ...
+  - Negative present: ես չեմ սիրում, ...
+  - Other tenses as needed
+- Processors are not tied to specific questionnaires — they self-select based on content
+- Each derivative question keeps a stable id (e.g. base + transformation key) for scoring continuity
+- Easily extensible: register more processors for other languages or transformations
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
