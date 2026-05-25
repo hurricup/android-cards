@@ -86,6 +86,9 @@
 - Processors are not tied to specific questionnaires — they self-select based on content
 - Each derivative question keeps a stable id (e.g. base + transformation key) for scoring continuity
 - Easily extensible: register more processors for other languages or transformations
+- Translation side (e.g. Russian) is harder than Armenian generation due to many inflected forms
+  - **Initial approach**: questionary XML specifies all needed translation forms explicitly
+  - **Later**: explore Russian morphology libraries / dictionaries (pymorphy3, OpenCorpora data, AOT.ru, lucene-analyzers-morfologik) to generate forms automatically
 
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
