@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -216,8 +217,9 @@ fun Questionaries(
             }
             TextButton(
                 border = ButtonDefaults.outlinedButtonBorder,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier
-                    .padding(10.dp)
+                    .padding(6.dp)
                     .fillMaxWidth(0.9f),
                 onClick = { launch(DEFAULT_SESSION_SIZE) }
             ) {
