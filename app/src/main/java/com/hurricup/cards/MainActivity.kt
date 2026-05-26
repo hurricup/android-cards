@@ -1,6 +1,8 @@
 package com.hurricup.cards
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -17,10 +19,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -55,10 +59,16 @@ import com.hurricup.cards.model.Distribution
 import com.hurricup.cards.model.Questionary
 import com.hurricup.cards.model.QuestionaryStats
 import com.hurricup.cards.ui.theme.AndroidCardsTheme
+import androidx.core.content.edit
 
 class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
     private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
+    private var reverseModes = mutableStateOf<Map<String, Boolean>>(emptyMap())
+
+    private val prefs: SharedPreferences by lazy {
+        getSharedPreferences("card_settings", MODE_PRIVATE)
+    }
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         uri?.let { exportStats(it) }
@@ -73,6 +83,7 @@ class MainActivity : ComponentActivity() {
         questionaries = Questionary.readAll(assets) { error ->
             Toast.makeText(this, error, Toast.LENGTH_LONG).show()
         } + Questionary.generateAll()
+        loadReverseModes()
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -84,11 +95,25 @@ class MainActivity : ComponentActivity() {
                         this,
                         questionaries,
                         distributions.value,
+                        reverseModes.value,
+                        ::toggleReverseMode,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
             }
         }
+    }
+
+    private fun loadReverseModes() {
+        reverseModes.value = questionaries.associate { q ->
+            q.id to prefs.getBoolean("reverse_${q.id}", false)
+        }
+    }
+
+    private fun toggleReverseMode(id: String) {
+        val newValue = !(reverseModes.value[id] ?: false)
+        prefs.edit { putBoolean("reverse_$id", newValue) }
+        reverseModes.value += (id to newValue)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -147,10 +172,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshDistributions() {
-        distributions.value = questionaries.associate { q ->
-            val stats = QuestionaryStats.forQuestionary(filesDir, q)
-            q.id to stats.distribution(q)
-        }
+        distributions.value = questionaries.flatMap { q ->
+            listOf(q, Questionary.reverseOf(q)).map {
+                it.id to QuestionaryStats.forQuestionary(filesDir, it).distribution(it)
+            }
+        }.toMap()
     }
 
     override fun onResume() {
@@ -164,6 +190,8 @@ fun Questionaries(
     mainActivity: MainActivity,
     questionaries: List<Questionary>,
     distributions: Map<String, Distribution>,
+    reverseModes: Map<String, Boolean>,
+    onToggleReverse: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -174,12 +202,14 @@ fun Questionaries(
             .fillMaxSize(1f)
     ) {
         for (questionary in questionaries) {
-            val dist = distributions[questionary.id]
+            val isReverse = reverseModes[questionary.id] == true
+            val active = if (isReverse) Questionary.reverseOf(questionary) else questionary
+            val dist = distributions[active.id]
             val half = DEFAULT_SESSION_SIZE / 2
             val double = DEFAULT_SESSION_SIZE * 2
             fun launch(sessionSize: Int) {
                 Intent(mainActivity, QuestionaryActivity::class.java).also {
-                    questionary.passWith(it)
+                    active.passWith(it)
                     it.putExtra("session_size", sessionSize)
                     mainActivity.startActivity(it)
                 }
@@ -194,6 +224,13 @@ fun Questionaries(
                 if (dist != null) {
                     PieChart(dist)
                 }
+                if (isReverse) {
+                    Text(
+                        text = "⇄",
+                        fontSize = 30.sp,
+                        modifier = Modifier.offset(x = (-1).dp, y = (-3).dp)
+                    )
+                }
                 Text(
                     text = questionary.title,
                     textAlign = TextAlign.Center,
@@ -202,14 +239,20 @@ fun Questionaries(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                SessionMenu(half, double) { launch(it) }
+                SessionMenu(half, double, isReverse, { onToggleReverse(questionary.id) }) { launch(it) }
             }
         }
     }
 }
 
 @Composable
-private fun SessionMenu(half: Int, double: Int, onSelect: (Int) -> Unit) {
+private fun SessionMenu(
+    half: Int,
+    double: Int,
+    isReverse: Boolean,
+    onToggleReverse: () -> Unit,
+    onSelect: (Int) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
@@ -223,6 +266,13 @@ private fun SessionMenu(half: Int, double: Int, onSelect: (Int) -> Unit) {
             DropdownMenuItem(
                 text = { Text("Marathon ($double)") },
                 onClick = { expanded = false; onSelect(double) }
+            )
+            DropdownMenuItem(
+                text = { Text("Reverse") },
+                trailingIcon = if (isReverse) {
+                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                } else null,
+                onClick = { expanded = false; onToggleReverse() }
             )
         }
     }

@@ -15,6 +15,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
 
 private const val INTENT_KEY = "questionary"
+private const val REVERSE_SUFFIX = "__reverse"
 
 open class Questionary(val title: String, val id: String = title) {
     protected open val _questions: MutableList<Question> = mutableListOf()
@@ -36,10 +37,25 @@ open class Questionary(val title: String, val id: String = title) {
             cache.put(it.id, it)
         }
 
+        fun reverseOf(questionary: Questionary): Questionary =
+            cache["${questionary.id}$REVERSE_SUFFIX"]!!
+
+        private fun cachePair(title: String, id: String, rawQuestions: List<Question>): Questionary {
+            val direct = Questionary(title, id).also {
+                it._questions += processVariants(rawQuestions, direct = true)
+            }
+            val reverse = Questionary(title, "$id$REVERSE_SUFFIX").also {
+                it._questions += processVariants(rawQuestions, direct = false)
+            }
+            cache(direct)
+            cache(reverse)
+            return direct
+        }
+
         fun generateAll(): List<Questionary> = listOf(
             CompositeQuestionary("+/−", listOf(Addition(), Subtraction())),
             CompositeQuestionary("×/÷", listOf(Multiplication(), Division())),
-        ).map { cache(it)!! }
+        ).map { cachePair(it.title, it.id, it.questions) }
 
         fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> =
             assetsManager.list("xml")?.flatMap { fileName ->
@@ -59,13 +75,15 @@ open class Questionary(val title: String, val id: String = title) {
             val questionaries = mutableListOf<Questionary>()
             while (xmlParser.next() != END_DOCUMENT) {
                 if (xmlParser.eventType == START_TAG && xmlParser.name == INTENT_KEY) {
-                    readQuestionary(xmlParser, direct)?.let { questionaries.add(it) }
+                    readQuestionary(xmlParser)?.let {
+                        questionaries.add(if (direct) it else reverseOf(it))
+                    }
                 }
             }
             return questionaries
         }
 
-        private fun readQuestionary(xmlParser: XmlPullParser, direct: Boolean): Questionary? {
+        private fun readQuestionary(xmlParser: XmlPullParser): Questionary? {
             var title: String? = null
             var id: String? = null
             var questions: List<Question> = emptyList()
@@ -78,11 +96,7 @@ open class Questionary(val title: String, val id: String = title) {
                     }
                 }
             }
-            return title?.let {
-                val q = Questionary(it, id ?: it)
-                q._questions += processVariants(questions, direct)
-                cache(q)
-            }
+            return title?.let { cachePair(it, id ?: it, questions) }
         }
 
         /**
