@@ -90,6 +90,20 @@
   - **Initial approach**: questionary XML specifies all needed translation forms explicitly
   - **Later**: explore Russian morphology libraries / dictionaries (pymorphy3, OpenCorpora data, AOT.ru, lucene-analyzers-morfologik) to generate forms automatically
 
+## Questionary groups
+- Higher-level grouping of questionaries: Math, Armenian, etc.
+- Only one group visible at a time; user switches between groups (UX TBD)
+- Group declared in XML (e.g. `<group>Armenian</group>`)
+
+## Levels
+- Optional numeric level on questions, set by the questionary author
+- Levels live within a group: user picks a group (e.g. Armenian) and a level (e.g. 4)
+- App filters questions across all questionaries in the group to level ≤ N
+- XML markup options to explore:
+  - Per-question: `<question level="3">…</question>`
+  - Block: `<level n="3"> <question>…</question> … </level>` grouping
+- Levels apply to raw questions before the variant pipeline / processors
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
