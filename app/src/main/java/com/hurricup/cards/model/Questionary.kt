@@ -3,7 +3,6 @@ package com.hurricup.cards.model
 import android.content.Intent
 import android.content.res.AssetManager
 import android.util.Log
-import android.util.Xml
 import com.hurricup.cards.model.impl.Addition
 import com.hurricup.cards.model.impl.CompositeQuestionary
 import com.hurricup.cards.model.impl.Division
@@ -12,6 +11,7 @@ import com.hurricup.cards.model.impl.Subtraction
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParser.END_DOCUMENT
 import org.xmlpull.v1.XmlPullParser.START_TAG
+import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
 
 private const val INTENT_KEY = "questionary"
@@ -52,20 +52,20 @@ open class Questionary(val title: String, val id: String = title) {
                 }
             } ?: emptyList()
 
-        private fun readFile(inputStream: InputStream): List<Questionary> {
-            val xmlParser = Xml.newPullParser()
+        internal fun readFile(inputStream: InputStream, direct: Boolean = true): List<Questionary> {
+            val xmlParser = XmlPullParserFactory.newInstance().newPullParser()
             xmlParser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
             xmlParser.setInput(inputStream, null)
             val questionaries = mutableListOf<Questionary>()
             while (xmlParser.next() != END_DOCUMENT) {
                 if (xmlParser.eventType == START_TAG && xmlParser.name == INTENT_KEY) {
-                    readQuestionary(xmlParser)?.let { questionaries.add(it) }
+                    readQuestionary(xmlParser, direct)?.let { questionaries.add(it) }
                 }
             }
             return questionaries
         }
 
-        private fun readQuestionary(xmlParser: XmlPullParser): Questionary? {
+        private fun readQuestionary(xmlParser: XmlPullParser, direct: Boolean): Questionary? {
             var title: String? = null
             var id: String? = null
             var questions: List<Question> = emptyList()
@@ -80,8 +80,40 @@ open class Questionary(val title: String, val id: String = title) {
             }
             return title?.let {
                 val q = Questionary(it, id ?: it)
-                q._questions += questions
+                q._questions += processVariants(questions, direct)
                 cache(q)
+            }
+        }
+
+        /**
+         * Expands pipe-separated variants and groups by effective question (direct)
+         * or effective answer (reverse). Variants on each side produce a cross-product
+         * of raw pairs; pairs are then grouped and the other side joined with "; ".
+         */
+        private fun processVariants(questions: List<Question>, direct: Boolean): List<Question> {
+            val grouped = HashMap<String, MutableList<String>>()
+            for (q in questions) {
+                val questionVariants = q.text.split('|').map { it.trim() }
+                val answerVariants = q.answer?.split('|')?.map { it.trim() } ?: listOf(null)
+                for (qv in questionVariants) {
+                    for (av in answerVariants) {
+                        val key: String
+                        val value: String?
+                        if (direct) {
+                            key = qv
+                            value = av
+                        } else {
+                            if (av == null) continue
+                            key = av
+                            value = qv
+                        }
+                        val list = grouped.getOrPut(key) { mutableListOf() }
+                        if (value != null && value !in list) list.add(value)
+                    }
+                }
+            }
+            return grouped.map { (key, values) ->
+                Question(key, if (values.isEmpty()) null else values.joinToString("; "))
             }
         }
 
