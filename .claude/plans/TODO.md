@@ -104,6 +104,11 @@
   - Block: `<level n="3"> <question>…</question> … </level>` grouping
 - Levels apply to raw questions before the variant pipeline / processors
 
+## Hide questionaries
+- "Hide" item in the per-questionary dropdown menu — removes from the main list
+- "Show hidden" toggle in the settings gear menu — when on, hidden ones reappear (dimmed) so they can be unhidden
+- Hidden state persisted in SharedPreferences per questionary id
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
