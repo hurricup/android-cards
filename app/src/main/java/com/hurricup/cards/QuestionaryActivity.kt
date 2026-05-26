@@ -198,7 +198,7 @@ class QuestionaryActivity() : ComponentActivity() {
                     }
             ) {
                 val answerText = if (answerRevealed.value) answer else currentQuestion.text
-                answerText.beautify().split('\n').forEach {
+                answerText.split('\n').forEach {
                     Text(
                         text = it.trim(),
                         fontSize = 6.em,
@@ -214,8 +214,7 @@ class QuestionaryActivity() : ComponentActivity() {
 
     @Composable
     private fun Question(currentQuestion: Question) {
-        val questionText = currentQuestion.text.beautify()
-        questionText.split('\n').forEach {
+        currentQuestion.text.split('\n').forEach {
             Text(
                 text = it.trim(),
                 fontSize = 6.em,
@@ -300,17 +299,6 @@ class QuestionaryActivity() : ComponentActivity() {
         }
     }
 }
-
-/**
- * Makes typographic adjustments:
- * - replaces a double minus with a dash
- * - replaces a three periods with an ellipsis
- * - replace a space before an ellipsis to a non-breakable space
- */
-private fun String.beautify() = this
-    .replace("--", "—")
-    .replace("...", "…")
-    .replace(" …", " …")
 
 class Stat(val total: Int) {
     var correct: Int by mutableStateOf(0)

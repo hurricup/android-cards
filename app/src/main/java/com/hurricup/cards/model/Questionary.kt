@@ -111,9 +111,20 @@ open class Questionary(val title: String, val id: String = title) {
 
         private fun readText(xmlParser: XmlPullParser): String {
             xmlParser.next()
-            val result = xmlParser.text.trim()
+            val result = xmlParser.text.trim().beautify()
             xmlParser.nextTag()
             return result
         }
     }
 }
+
+/**
+ * Makes typographic adjustments:
+ * - replaces a double minus with a dash
+ * - replaces a three periods with an ellipsis
+ * - replace a space before an ellipsis to a non-breakable space
+ */
+private fun String.beautify() = this
+    .replace("--", "—")
+    .replace("...", "…")
+    .replace(" …", " …")
