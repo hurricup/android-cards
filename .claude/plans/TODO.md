@@ -90,6 +90,28 @@
   - **Initial approach**: questionary XML specifies all needed translation forms explicitly
   - **Later**: explore Russian morphology libraries / dictionaries (pymorphy3, OpenCorpora data, AOT.ru, lucene-analyzers-morfologik) to generate forms automatically
 
+## Pipe-separated variants and direct/reversed questionnaires
+Pipeline for processing questionnaires with multiple acceptable variants on either side.
+
+1. **Expand pipes**: `|` is the variant separator in question and answer text.
+   - When only one side has pipes, split into N pairs (same other side).
+   - When both sides have pipes, produce the full cross-product.
+   - Example: `привет|здравствуй` ↔ `բարև|ողջույն` → 4 raw pairs.
+   - Result: a raw set of `(question, answer)` pairs.
+
+2. **Direction**: each questionary has a direction flag (`reverse: Boolean`, default false).
+   - For now only direct (`false`) is used; UX for switching/exposing reversed TBD.
+
+3. **Group by effective question**:
+   - Direct mode: key = question text; value = list of answers.
+   - Reversed mode: key = answer text; value = list of questions.
+
+4. **Collapse**: for each map entry, join the value list with `"; "` into a single string. Result: one question per unique key with semicolon-joined acceptable answers.
+
+5. **Output**: the final questionary used by the app, with stable keys for stats.
+
+Replaces current convention of stuffing variants into one cell via comma. Foundation for later: same XML can produce both direct and reversed questionnaires.
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
