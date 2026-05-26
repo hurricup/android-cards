@@ -227,14 +227,14 @@ fun Questionaries(
                 if (isReverse) {
                     Text(
                         text = "⇄",
-                        fontSize = 30.sp,
+                        fontSize = 28.sp,
                         modifier = Modifier.offset(x = (-1).dp, y = (-3).dp)
                     )
                 }
                 Text(
                     text = questionary.title,
                     textAlign = TextAlign.Center,
-                    fontSize = 30.sp,
+                    fontSize = 28.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
