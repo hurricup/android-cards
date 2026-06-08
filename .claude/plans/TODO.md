@@ -109,6 +109,12 @@
 - "Show hidden" toggle in the settings gear menu — when on, hidden ones reappear (dimmed) so they can be unhidden
 - Hidden state persisted in SharedPreferences per questionary id
 
+## Quicksearch
+- Type a partial word, see matching questions and answers across all questionaries
+- Sorted by relevancy (prefix match first, then substring, then fuzzy/Levenshtein)
+- Useful for looking up a specific word/phrase without browsing
+- UX TBD: dedicated search screen or inline search bar on main activity
+
 ## Rich text in questions/answers
 - XML markup tags for parts of question/answer text
 - Tagged parts rendered differently (underline, color, etc.)
