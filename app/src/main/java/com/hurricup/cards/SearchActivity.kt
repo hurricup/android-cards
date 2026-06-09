@@ -34,17 +34,20 @@ private val PUNCT_REGEX = "\\p{P}+".toRegex()
 internal fun normalize(s: String): String =
     s.lowercase().replace(PUNCT_REGEX, "")
 
+private data class Match(val question: Question, val matchIndex: Int, val leftover: Int)
+
 internal fun search(query: String, questions: List<Question>): List<Question> {
     if (query.isBlank()) return emptyList()
     val normalizedQuery = normalize(query)
     if (normalizedQuery.isEmpty()) return emptyList()
     return questions
         .mapNotNull { q ->
-            val idx = normalize(q.text).indexOf(normalizedQuery)
-            if (idx >= 0) q to idx else null
+            val normalized = normalize(q.text)
+            val idx = normalized.indexOf(normalizedQuery)
+            if (idx >= 0) Match(q, idx, normalized.length - normalizedQuery.length) else null
         }
-        .sortedWith(compareBy({ it.second }, { it.first.text }))
-        .map { it.first }
+        .sortedWith(compareBy({ it.matchIndex }, { it.leftover }, { it.question.text }))
+        .map { it.question }
 }
 
 class SearchActivity : ComponentActivity() {

@@ -43,9 +43,9 @@ class SearchTest {
     @Test
     fun ignoresPunctuationInText() {
         val questions = listOf(q("ի՞նչ կա"), q("ինչ"))
-        // Both match at index 0; sort alphabetically (՞ U+055E < ն U+0576)
+        // Both match at index 0; shorter leftover wins
         val results = search("ինչ", questions).map { it.text }
-        assertEquals(listOf("ի՞նչ կա", "ինչ"), results)
+        assertEquals(listOf("ինչ", "ի՞նչ կա"), results)
     }
 
     @Test
@@ -56,15 +56,30 @@ class SearchTest {
     }
 
     @Test
-    fun sortByMatchIndexThenAlphabetical() {
+    fun sortByMatchIndexThenLeftoverThenAlphabetical() {
         val questions = listOf(
-            q("xxxap"),   // match at 3
-            q("apple"),   // match at 0
-            q("apricot"), // match at 0
-            q("xap"),     // match at 1
+            q("xxxap"),    // idx 3, leftover 3
+            q("apricot"),  // idx 0, leftover 5
+            q("ap"),       // idx 0, leftover 0
+            q("apple"),    // idx 0, leftover 3
+            q("xap"),      // idx 1, leftover 1
         )
         val results = search("ap", questions).map { it.text }
-        assertEquals(listOf("apple", "apricot", "xap", "xxxap"), results)
+        // idx 0 first: shortest leftover wins (ap, then apple, then apricot)
+        // then idx 1 (xap), then idx 3 (xxxap)
+        assertEquals(listOf("ap", "apple", "apricot", "xap", "xxxap"), results)
+    }
+
+    @Test
+    fun leftoverTiebreakAlphabetical() {
+        val questions = listOf(
+            q("apricot"),   // idx 0, leftover 5
+            q("applepie"),  // idx 0, leftover 6
+            q("apemen"),    // idx 0, leftover 4
+        )
+        val results = search("ap", questions).map { it.text }
+        // Sort by leftover asc: apemen (4) < apricot (5) < applepie (6)
+        assertEquals(listOf("apemen", "apricot", "applepie"), results)
     }
 
     @Test
