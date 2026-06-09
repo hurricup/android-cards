@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBar
@@ -124,6 +125,11 @@ class MainActivity : ComponentActivity() {
         TopAppBar(
             title = {},
             actions = {
+                IconButton(onClick = {
+                    startActivity(Intent(this@MainActivity, SearchActivity::class.java))
+                }) {
+                    Icon(Icons.Filled.Search, contentDescription = "Search")
+                }
                 Box {
                     IconButton(onClick = { expanded = true }) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
