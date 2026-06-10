@@ -1,6 +1,7 @@
 package com.hurricup.cards
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -51,6 +52,7 @@ internal fun search(query: String, questions: List<Question>): List<Question> {
 class SearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val allQuestions = Questionary.cache.values.flatMap { it.questions }
         enableEdgeToEdge()
         setContent {
