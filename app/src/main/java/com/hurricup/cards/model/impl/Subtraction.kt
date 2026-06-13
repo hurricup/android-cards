@@ -8,7 +8,7 @@ class Subtraction : Questionary("Вычитание") {
         val result = mutableListOf<Question>()
         for (i in 0..10) {
             for (j in 0..10) {
-                result += Question("${i + j} - $j = ?")
+                result += Question("${i + j} - $j", "$i")
             }
         }
         result

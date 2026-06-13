@@ -8,7 +8,7 @@ class Addition : Questionary("Сложение") {
         val result = mutableListOf<Question>()
         for (i in 0..10) {
             for (j in 0..10) {
-                result += Question("$i + $j = ?")
+                result += Question("$i + $j", "${i + j}")
             }
         }
         result
