@@ -65,6 +65,8 @@ import com.hurricup.cards.model.QuestionaryStats
 import com.hurricup.cards.ui.theme.AndroidCardsTheme
 import androidx.core.content.edit
 
+private const val RECENT_WINDOW_MS = 12L * 60 * 60 * 1000
+
 class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
     private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
@@ -181,9 +183,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshDistributions() {
+        val since = System.currentTimeMillis() - RECENT_WINDOW_MS
         distributions.value = questionaries.flatMap { q ->
             listOf(q, Questionary.reverseOf(q)).map {
-                it.id to QuestionaryStats.forQuestionary(filesDir, it).distribution(it)
+                it.id to QuestionaryStats.forQuestionary(filesDir, it).distribution(it, since)
             }
         }.toMap()
     }
@@ -215,6 +218,7 @@ fun Questionaries(
             val isReverse = reverseModes[questionary.id] == true
             val active = if (isReverse) Questionary.reverseOf(questionary) else questionary
             val dist = distributions[active.id]
+            val isDone = dist?.doneRecently == true
             val half = DEFAULT_SESSION_SIZE / 2
             val double = DEFAULT_SESSION_SIZE * 2
             fun launch(sessionSize: Int) {
@@ -248,6 +252,8 @@ fun Questionaries(
                     fontSize = 28.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    color = if (isDone) Color.Unspecified
+                    else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                     modifier = Modifier.weight(1f)
                 )
                 SessionMenu(half, double, isReverse, { onToggleReverse(questionary.id) }) { launch(it) }

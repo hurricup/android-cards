@@ -56,7 +56,7 @@ class QuestionaryStats(private val file: File) {
 
     fun lastAsked(questionText: String): Long = lastAsked[questionText] ?: 0L
 
-    fun distribution(questionary: Questionary): Distribution {
+    fun distribution(questionary: Questionary, recentSince: Long): Distribution {
         val now = System.currentTimeMillis()
         var mistakes = 0
         var new = 0
@@ -68,7 +68,16 @@ class QuestionaryStats(private val file: File) {
                 else -> known++
             }
         }
-        return Distribution(mistakes, known, new)
+        val goal = minOf(DEFAULT_SESSION_SIZE, questionary.size)
+        return Distribution(mistakes, known, new, doneRecently = answersSince(questionary, recentSince) >= goal)
+    }
+
+    /** Number of answers recorded for this questionary's questions since [since]. */
+    private fun answersSince(questionary: Questionary, since: Long): Int {
+        val texts = questionary.questions.mapTo(HashSet()) { it.text }
+        return attempts.entries
+            .filter { it.key in texts }
+            .sumOf { entry -> entry.value.count { it.timestamp >= since } }
     }
 
     fun selectSession(questions: List<Question>, sessionSize: Int = DEFAULT_SESSION_SIZE): List<Int> {
@@ -191,7 +200,7 @@ class QuestionaryStats(private val file: File) {
     }
 }
 
-data class Distribution(val mistakes: Int, val known: Int, val new: Int) {
+data class Distribution(val mistakes: Int, val known: Int, val new: Int, val doneRecently: Boolean = false) {
     val total get() = mistakes + known + new
 }
 
