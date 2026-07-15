@@ -16,9 +16,12 @@
 - Optional per-question stat display during exercise (configurable)
 - Configurable "trained" window: currently a hard limit (question/daily goal considered trained within a fixed period, e.g. 24/12 hours). Make this window user-configurable.
 
-## Synthetic questionaries by stat category
-- Run a synthetic questionary composed of all unknown, all known, or all wrong questions across questionaries
-- Stats still counted against the respective source questionaries
+## Questionary mode (session composition)
+- Not a separate synthetic questionary — composites already exist (e.g. +/−). Instead add a session "mode" option.
+- Modes: normal (current three-pile algorithm), prioritize wrong, prioritize new, prioritize known.
+- Selected from the same per-questionary popup menu as direct/reverse order and session size.
+- Stats still counted against the respective source questionaries.
+- Window/session size should likewise be an option in the menu, not an immediate run.
 
 ## Session question selection improvements
 - Session size configurable: global config with per-questionary override
