@@ -14,6 +14,11 @@
 - Separate scoring window from retention window (e.g. score based on last week, but keep data for a month)
 - Configurable scoring/retention windows as user settings
 - Optional per-question stat display during exercise (configurable)
+- Configurable "trained" window: currently a hard limit (question/daily goal considered trained within a fixed period, e.g. 24/12 hours). Make this window user-configurable.
+
+## Synthetic questionaries by stat category
+- Run a synthetic questionary composed of all unknown, all known, or all wrong questions across questionaries
+- Stats still counted against the respective source questionaries
 
 ## Session question selection improvements
 - Session size configurable: global config with per-questionary override
