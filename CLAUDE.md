@@ -17,14 +17,16 @@ Flashcard learning app. Originally built for kids, now primarily used by the aut
 
 - **Question** (`model/Question.kt`) — `data class Question(text, answer? , questionaryId)`. Carries the id of its owning questionary so its stats are tracked independently of which questionary shows it.
 - **Questionary** (`model/Questionary.kt`) — base class. Handles XML parsing from assets, caching by id in companion object map, Intent-based serialization (id as key). Each source yields a direct and a reverse variant (`id__reverse`).
-- **CompositeQuestionary** (`model/impl/CompositeQuestionary.kt`) — aggregates questions from multiple parts under one title/id. Parts are cached under their own ids, so their questions keep per-part stats; the composite just aggregates.
+- **ReferenceCompositeQuestionary** (`model/impl/ReferenceCompositeQuestionary.kt`) — aggregates questions from parts referenced by id, resolved lazily from the cache. Parts keep their own stats; missing refs are skipped and reference cycles are broken. Used for the math composites and for XML-declared composites.
 - **QuestionaryStats** (`model/QuestionaryStats.kt`) — per-question answer history for one questionary id, one JSON file, decay-weighted scoring.
 - **StatsCoordinator** (`model/StatsCoordinator.kt`) — routes each question to the store of its `questionaryId`; owns session composition (three-pile: mistakes/new/known) and distribution aggregation for pie charts.
 
 ## Questionnaire Sources
 
 ### XML Assets (`assets/xml/`)
-Parsed via `XmlPullParser`. Each file follows structure: `<questionary><title>...</title><questions><question><text>...</text><answer>...</answer></question>...</questions></questionary>`.
+Parsed via `XmlPullParser`. Each file follows structure: `<questionary><title>...</title><questions><question><text>...</text><answer>...</answer></question>...</questions></questionary>`. Optional `<id>` overrides the stats key (defaults to title). Pipe (`|`) in text/answer expands to variant cross-product.
+
+A `<questionary>` may instead declare a composite via `<questionaries><id>other-id</id>...</questionaries>` (mutually exclusive with `<questions>`) — it aggregates the referenced questionaries by id.
 
 Files: Armenian alphabet, numbers, words, grammar, classes; Russian vocabulary; speech therapy exercises.
 

@@ -1,6 +1,6 @@
 package com.hurricup.cards.model
 
-import com.hurricup.cards.model.impl.CompositeQuestionary
+import com.hurricup.cards.model.impl.ReferenceCompositeQuestionary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,7 +32,7 @@ class StatsCoordinatorTest {
     fun compositeSharesHistoryWithParts() {
         val part1 = read("P1", q("a", "x"), q("b", "y"))
         val part2 = read("P2", q("c", "z"))
-        val composite = CompositeQuestionary("C", "C", listOf(part1, part2))
+        val composite = ReferenceCompositeQuestionary("C", "C", listOf(part1.id, part2.id), reverse = false)
 
         val coordinator = StatsCoordinator(tmp.root)
         // answer "a" wrong through the composite
@@ -55,7 +55,7 @@ class StatsCoordinatorTest {
     fun statsStoredPerPartNotComposite() {
         val part1 = read("P1", q("a", "x"))
         val part2 = read("P2", q("c", "z"))
-        val composite = CompositeQuestionary("C", "C", listOf(part1, part2))
+        val composite = ReferenceCompositeQuestionary("C", "C", listOf(part1.id, part2.id), reverse = false)
 
         StatsCoordinator(tmp.root).record(composite.questions.first { it.text == "a" }, correct = true)
 
@@ -77,7 +77,7 @@ class StatsCoordinatorTest {
     fun doneRecentlyAggregatesAcrossParts() {
         val part1 = read("P1", q("a", "x"), q("b", "y"))
         val part2 = read("P2", q("c", "z"))
-        val composite = CompositeQuestionary("C", "C", listOf(part1, part2))
+        val composite = ReferenceCompositeQuestionary("C", "C", listOf(part1.id, part2.id), reverse = false)
         // goal = min(DEFAULT_SESSION_SIZE, 3) = 3
 
         val coordinator = StatsCoordinator(tmp.root)

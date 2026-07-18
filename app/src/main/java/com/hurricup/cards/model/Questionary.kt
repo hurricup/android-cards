@@ -4,9 +4,9 @@ import android.content.Intent
 import android.content.res.AssetManager
 import android.util.Log
 import com.hurricup.cards.model.impl.Addition
-import com.hurricup.cards.model.impl.CompositeQuestionary
 import com.hurricup.cards.model.impl.Division
 import com.hurricup.cards.model.impl.Multiplication
+import com.hurricup.cards.model.impl.ReferenceCompositeQuestionary
 import com.hurricup.cards.model.impl.Subtraction
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParser.END_DOCUMENT
@@ -15,7 +15,7 @@ import org.xmlpull.v1.XmlPullParserFactory
 import java.io.InputStream
 
 private const val INTENT_KEY = "questionary"
-private const val REVERSE_SUFFIX = "__reverse"
+internal const val REVERSE_SUFFIX = "__reverse"
 
 open class Questionary(val title: String, val id: String = title) {
     protected open val _questions: MutableList<Question> = mutableListOf()
@@ -55,26 +55,52 @@ open class Questionary(val title: String, val id: String = title) {
         }
 
         /**
-         * Caches a composite (direct + reverse) whose questions are aggregated from its parts.
-         * Each part is processed and cached under its own id, so stats stay per-part.
+         * Caches a composite (direct + reverse) that references its parts by id and aggregates
+         * their questions lazily. Parts keep their own stats (their questions carry their ids).
          */
-        private fun cacheComposite(title: String, id: String, parts: List<Questionary>): Questionary {
-            val directParts = parts.map { cacheProcessed(it.title, it.id, it.questions) }
-            val reverseParts = directParts.map { reverseOf(it) }
-            val direct = CompositeQuestionary(title, id, directParts)
-            val reverse = CompositeQuestionary(title, "$id$REVERSE_SUFFIX", reverseParts)
+        private fun cacheReferenceComposite(title: String, id: String, refIds: List<String>): Questionary {
+            val direct = ReferenceCompositeQuestionary(title, id, refIds, reverse = false)
+            val reverse = ReferenceCompositeQuestionary(title, "$id$REVERSE_SUFFIX", refIds, reverse = true)
             cache(direct)
             cache(reverse)
             return direct
         }
 
-        fun generateAll(): List<Questionary> = listOf(
-            cacheComposite("+/−", "+/−", listOf(Addition(), Subtraction())),
-            cacheComposite("×/÷", "×/÷", listOf(Multiplication(), Division())),
-        )
+        /** Reports missing references and reference cycles among the given composites. */
+        internal fun validateComposites(
+            composites: List<ReferenceCompositeQuestionary>,
+            onError: (String) -> Unit,
+        ) {
+            for (c in composites) {
+                for (ref in c.refIds) {
+                    if (cache[ref] == null) onError("Referenced questionary not found: $ref")
+                }
+            }
+            fun hasCycle(id: String, stack: MutableSet<String>): Boolean {
+                val q = cache[id]
+                if (q !is ReferenceCompositeQuestionary) return false
+                if (!stack.add(id)) return true
+                val cycle = q.refIds.any { hasCycle(it, stack) }
+                stack.remove(id)
+                return cycle
+            }
+            for (c in composites) {
+                if (hasCycle(c.id, HashSet())) onError("Recursive composite: ${c.title}")
+            }
+        }
 
-        fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> =
-            assetsManager.list("xml")?.flatMap { fileName ->
+        fun generateAll(): List<Questionary> {
+            val parts = listOf(Addition(), Subtraction(), Multiplication(), Division())
+                .map { cacheProcessed(it.title, it.id, it.questions) }
+            val (add, sub, mul, div) = parts
+            return listOf(
+                cacheReferenceComposite("+/−", "+/−", listOf(add.id, sub.id)),
+                cacheReferenceComposite("×/÷", "×/÷", listOf(mul.id, div.id)),
+            )
+        }
+
+        fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> {
+            val all = assetsManager.list("xml")?.flatMap { fileName ->
                 try {
                     assetsManager.open("xml/$fileName").use { readFile(it) }
                 } catch (e: Exception) {
@@ -83,6 +109,9 @@ open class Questionary(val title: String, val id: String = title) {
                     emptyList()
                 }
             } ?: emptyList()
+            validateComposites(all.filterIsInstance<ReferenceCompositeQuestionary>(), onError)
+            return all
+        }
 
         internal fun readFile(inputStream: InputStream, direct: Boolean = true): List<Questionary> {
             val xmlParser = XmlPullParserFactory.newInstance().newPullParser()
@@ -103,16 +132,32 @@ open class Questionary(val title: String, val id: String = title) {
             var title: String? = null
             var id: String? = null
             var questions: List<Question> = emptyList()
+            var refIds: List<String>? = null
             while (xmlParser.next() != XmlPullParser.END_TAG) {
                 if (xmlParser.eventType == START_TAG) {
                     when (xmlParser.name) {
                         "title" -> title = readText(xmlParser)
                         "id" -> id = readText(xmlParser)
                         "questions" -> questions = readQuestions(xmlParser)
+                        "questionaries" -> refIds = readQuestionaryRefs(xmlParser)
                     }
                 }
             }
-            return title?.let { cacheProcessed(it, id ?: it, questions) }
+            return title?.let {
+                val resolvedId = id ?: it
+                if (refIds != null) cacheReferenceComposite(it, resolvedId, refIds)
+                else cacheProcessed(it, resolvedId, questions)
+            }
+        }
+
+        private fun readQuestionaryRefs(xmlParser: XmlPullParser): List<String> {
+            val refIds = mutableListOf<String>()
+            while (xmlParser.next() != XmlPullParser.END_TAG) {
+                if (xmlParser.eventType == START_TAG && xmlParser.name == "id") {
+                    refIds.add(readText(xmlParser))
+                }
+            }
+            return refIds
         }
 
         /**
