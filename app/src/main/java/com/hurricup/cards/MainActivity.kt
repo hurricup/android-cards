@@ -32,12 +32,15 @@ import com.hurricup.cards.model.*
 import com.hurricup.cards.ui.theme.AndroidCardsTheme
 import java.io.File
 
-private const val RECENT_WINDOW_MS = 6 * 12L * 60 * 60 * 1000
+private const val DAY_MS = 24L * 60 * 60 * 1000
+private const val DEFAULT_RECENT_WINDOW_DAYS = 3
+private const val RECENT_WINDOW_DAYS_KEY = "recent_window_days"
 
 class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
     private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
     private var reverseModes = mutableStateOf<Map<String, Boolean>>(emptyMap())
+    private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
 
     private val prefs: SharedPreferences by lazy {
         getSharedPreferences("card_settings", MODE_PRIVATE)
@@ -57,6 +60,7 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, error, Toast.LENGTH_LONG).show()
         } + Questionary.generateAll()
         loadReverseModes()
+        recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -89,10 +93,17 @@ class MainActivity : ComponentActivity() {
         reverseModes.value += (id to newValue)
     }
 
+    private fun setRecentWindowDays(days: Int) {
+        prefs.edit { putInt(RECENT_WINDOW_DAYS_KEY, days) }
+        recentWindowDays.value = days
+        refreshDistributions()
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun SettingsBar() {
         var expanded by remember { mutableStateOf(false) }
+        var windowSubmenu by remember { mutableStateOf(false) }
         TopAppBar(
             title = {},
             actions = {
@@ -105,7 +116,10 @@ class MainActivity : ComponentActivity() {
                     IconButton(onClick = { expanded = true }) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenu(
+                        expanded = expanded && !windowSubmenu,
+                        onDismissRequest = { expanded = false }
+                    ) {
                         DropdownMenuItem(
                             text = { Text("Export stats") },
                             onClick = { expanded = false; exportLauncher.launch("cards_stats.zip") }
@@ -114,6 +128,28 @@ class MainActivity : ComponentActivity() {
                             text = { Text("Import stats") },
                             onClick = { expanded = false; importLauncher.launch("application/zip") }
                         )
+                        DropdownMenuItem(
+                            text = { Text("Recent window: ${recentWindowDays.value}d") },
+                            onClick = { windowSubmenu = true }
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = windowSubmenu,
+                        onDismissRequest = { windowSubmenu = false; expanded = false }
+                    ) {
+                        for (days in 1..7) {
+                            DropdownMenuItem(
+                                text = { Text("$days ${if (days == 1) "day" else "days"}") },
+                                trailingIcon = if (days == recentWindowDays.value) {
+                                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                                } else null,
+                                onClick = {
+                                    setRecentWindowDays(days)
+                                    windowSubmenu = false
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -150,7 +186,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshDistributions() {
-        val since = System.currentTimeMillis() - RECENT_WINDOW_MS
+        val since = System.currentTimeMillis() - recentWindowDays.value * DAY_MS
         distributions.value = questionaries.flatMap { q ->
             listOf(q, Questionary.reverseOf(q)).map {
                 it.id to QuestionaryStats.forQuestionary(filesDir, it).distribution(it, since)
