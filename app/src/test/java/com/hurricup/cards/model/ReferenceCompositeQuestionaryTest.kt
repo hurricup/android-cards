@@ -34,6 +34,24 @@ class ReferenceCompositeQuestionaryTest {
     }
 
     @Test
+    fun xmlDeclaredCompositeAggregatesParts() {
+        read("XR1", q("a", "x"), q("b", "y"))
+        read("XR2", q("c", "z"))
+        val compositeXml = """
+            <questionary>
+                <id>XRC</id>
+                <title>XRC</title>
+                <questionaries>
+                    <id>XR1</id>
+                    <id>XR2</id>
+                </questionaries>
+            </questionary>
+        """.trimIndent()
+        val composite = Questionary.readFile(compositeXml.byteInputStream(), direct = true).single()
+        assertEquals(setOf("a", "b", "c"), composite.questions.mapTo(HashSet()) { it.text })
+    }
+
+    @Test
     fun missingReferenceIsSkipped() {
         read("R3", q("a", "x"))
         val composite = ReferenceCompositeQuestionary("RC2", "RC2", listOf("R3", "nope"), reverse = false)

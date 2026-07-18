@@ -90,6 +90,68 @@ class StatsCoordinatorTest {
     }
 
     @Test
+    fun xmlCompositeAggregatesTrainedSubStats() {
+        read("AX1", q("a", "x"), q("b", "y"))
+        val sub1 = Questionary.cache["AX1"]!!
+        read("AX2", q("c", "z"))
+        val compositeXml = """
+            <questionary>
+                <id>AXC</id>
+                <title>AXC</title>
+                <questionaries><id>AX1</id><id>AX2</id></questionaries>
+            </questionary>
+        """.trimIndent()
+        val composite = Questionary.readFile(compositeXml.byteInputStream(), direct = true).single()
+
+        val coordinator = StatsCoordinator(tmp.root)
+        coordinator.record(sub1.questions.first { it.text == "a" }, correct = true)
+
+        val d = coordinator.distribution(composite, recentSince = 0)
+        assertEquals(3, d.total)
+        assertEquals(1, d.known)
+        assertEquals(2, d.new)
+    }
+
+    @Test
+    fun reverseCompositeAggregatesReverseSubStats() {
+        read("RV1", q("cat", "кошка"))
+        val compositeXml = """
+            <questionary>
+                <id>RVC</id>
+                <title>RVC</title>
+                <questionaries><id>RV1</id></questionaries>
+            </questionary>
+        """.trimIndent()
+        Questionary.readFile(compositeXml.byteInputStream(), direct = true)
+        val reverseComposite = Questionary.cache["RVC__reverse"]!!
+        val reverseSub = Questionary.cache["RV1__reverse"]!!
+
+        val coordinator = StatsCoordinator(tmp.root)
+        coordinator.record(reverseSub.questions.single(), correct = true)
+
+        val d = coordinator.distribution(reverseComposite, recentSince = 0)
+        assertEquals(1, d.total)
+        assertEquals(1, d.known)
+        assertEquals(0, d.new)
+    }
+
+    @Test
+    fun cyrillicIdsDoNotCollide() {
+        read("аб", q("x", "1"))
+        read("вг", q("y", "2"))
+        val subAB = Questionary.cache["аб"]!!
+        val subVG = Questionary.cache["вг"]!!
+
+        StatsCoordinator(tmp.root).record(subAB.questions.single(), correct = true)
+        StatsCoordinator(tmp.root).record(subVG.questions.single(), correct = false)
+
+        // fresh coordinator reads from disk; аб's history must survive вг's save
+        val d = StatsCoordinator(tmp.root).distribution(subAB, recentSince = 0)
+        assertEquals(1, d.known)
+        assertEquals(0, d.new)
+    }
+
+    @Test
     fun sessionSizeCappedToQuestionCount() {
         val part = read("P1", q("a", "x"), q("b", "y"), q("c", "z"))
         val session = StatsCoordinator(tmp.root).selectSession(part, sessionSize = 10)
