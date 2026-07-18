@@ -217,9 +217,10 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshDistributions() {
         val since = System.currentTimeMillis() - recentWindowDays.value * DAY_MS
+        val coordinator = StatsCoordinator(filesDir)
         distributions.value = questionaries.flatMap { q ->
             listOf(q, Questionary.reverseOf(q)).map {
-                it.id to QuestionaryStats.forQuestionary(filesDir, it).distribution(it, since)
+                it.id to coordinator.distribution(it, since)
             }
         }.toMap()
     }

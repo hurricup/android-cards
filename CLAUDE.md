@@ -15,10 +15,11 @@ Flashcard learning app. Originally built for kids, now primarily used by the aut
 
 ## Data Model
 
-- **Question** (`model/Question.kt`) — `data class Question(text: String, answer: String? = null)`. Answer is optional.
-- **Questionary** (`model/Questionary.kt`) — base class. Handles XML parsing from assets, caching by title in companion object map, Intent-based serialization (title as key).
-- **CompositeQuestionary** (`model/impl/CompositeQuestionary.kt`) — combines questions from multiple questionnaires under one title.
-- **QuestionaryStats** (`model/QuestionaryStats.kt`) — persistent per-question answer history with decay-weighted scoring. Drives session composition (three-pile algorithm: mistakes/new/known) and distribution stats for pie charts. JSON storage per questionary.
+- **Question** (`model/Question.kt`) — `data class Question(text, answer? , questionaryId)`. Carries the id of its owning questionary so its stats are tracked independently of which questionary shows it.
+- **Questionary** (`model/Questionary.kt`) — base class. Handles XML parsing from assets, caching by id in companion object map, Intent-based serialization (id as key). Each source yields a direct and a reverse variant (`id__reverse`).
+- **CompositeQuestionary** (`model/impl/CompositeQuestionary.kt`) — aggregates questions from multiple parts under one title/id. Parts are cached under their own ids, so their questions keep per-part stats; the composite just aggregates.
+- **QuestionaryStats** (`model/QuestionaryStats.kt`) — per-question answer history for one questionary id, one JSON file, decay-weighted scoring.
+- **StatsCoordinator** (`model/StatsCoordinator.kt`) — routes each question to the store of its `questionaryId`; owns session composition (three-pile: mistakes/new/known) and distribution aggregation for pie charts.
 
 ## Questionnaire Sources
 

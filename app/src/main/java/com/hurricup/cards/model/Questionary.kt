@@ -40,22 +40,38 @@ open class Questionary(val title: String, val id: String = title) {
         fun reverseOf(questionary: Questionary): Questionary =
             cache["${questionary.id}$REVERSE_SUFFIX"]!!
 
-        private fun cachePair(title: String, id: String, rawQuestions: List<Question>): Questionary {
+        /** Processes raw questions into direct + reverse questionaries (stamped with their ids) and caches both. */
+        private fun cacheProcessed(title: String, id: String, rawQuestions: List<Question>): Questionary {
+            val reverseId = "$id$REVERSE_SUFFIX"
             val direct = Questionary(title, id).also {
-                it._questions += processVariants(rawQuestions, direct = true)
+                it._questions += processVariants(rawQuestions, direct = true, ownerId = id)
             }
-            val reverse = Questionary(title, "$id$REVERSE_SUFFIX").also {
-                it._questions += processVariants(rawQuestions, direct = false)
+            val reverse = Questionary(title, reverseId).also {
+                it._questions += processVariants(rawQuestions, direct = false, ownerId = reverseId)
             }
             cache(direct)
             cache(reverse)
             return direct
         }
 
+        /**
+         * Caches a composite (direct + reverse) whose questions are aggregated from its parts.
+         * Each part is processed and cached under its own id, so stats stay per-part.
+         */
+        private fun cacheComposite(title: String, id: String, parts: List<Questionary>): Questionary {
+            val directParts = parts.map { cacheProcessed(it.title, it.id, it.questions) }
+            val reverseParts = directParts.map { reverseOf(it) }
+            val direct = CompositeQuestionary(title, id, directParts)
+            val reverse = CompositeQuestionary(title, "$id$REVERSE_SUFFIX", reverseParts)
+            cache(direct)
+            cache(reverse)
+            return direct
+        }
+
         fun generateAll(): List<Questionary> = listOf(
-            CompositeQuestionary("+/−", listOf(Addition(), Subtraction())),
-            CompositeQuestionary("×/÷", listOf(Multiplication(), Division())),
-        ).map { cachePair(it.title, it.id, it.questions) }
+            cacheComposite("+/−", "+/−", listOf(Addition(), Subtraction())),
+            cacheComposite("×/÷", "×/÷", listOf(Multiplication(), Division())),
+        )
 
         fun readAll(assetsManager: AssetManager, onError: (String) -> Unit = {}): List<Questionary> =
             assetsManager.list("xml")?.flatMap { fileName ->
@@ -96,7 +112,7 @@ open class Questionary(val title: String, val id: String = title) {
                     }
                 }
             }
-            return title?.let { cachePair(it, id ?: it, questions) }
+            return title?.let { cacheProcessed(it, id ?: it, questions) }
         }
 
         /**
@@ -104,7 +120,7 @@ open class Questionary(val title: String, val id: String = title) {
          * or effective answer (reverse). Variants on each side produce a cross-product
          * of raw pairs; pairs are then grouped and the other side joined with "; ".
          */
-        private fun processVariants(questions: List<Question>, direct: Boolean): List<Question> {
+        private fun processVariants(questions: List<Question>, direct: Boolean, ownerId: String): List<Question> {
             val grouped = HashMap<String, MutableList<String>>()
             for (q in questions) {
                 val questionVariants = q.text.split('|').map { it.trim() }
@@ -127,7 +143,7 @@ open class Questionary(val title: String, val id: String = title) {
                 }
             }
             return grouped.map { (key, values) ->
-                Question(key, if (values.isEmpty()) null else values.joinToString("; "))
+                Question(key, if (values.isEmpty()) null else values.joinToString("; "), ownerId)
             }
         }
 

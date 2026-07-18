@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.em
 import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
 import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
-import com.hurricup.cards.model.QuestionaryStats
+import com.hurricup.cards.model.StatsCoordinator
 
 private const val SESSION_SIZE_KEY = "session_size"
 
@@ -60,16 +60,14 @@ class QuestionaryActivity() : ComponentActivity() {
     private val questionary: Questionary
         get() = Questionary.from(intent)
 
-    private val stats: QuestionaryStats by lazy {
-        QuestionaryStats.forQuestionary(filesDir, questionary)
-    }
+    private val stats: StatsCoordinator by lazy { StatsCoordinator(filesDir) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val requestedSize = intent.getIntExtra(SESSION_SIZE_KEY, DEFAULT_SESSION_SIZE)
         val mistakesCap = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT) / 100.0
-        val session = stats.selectSession(questionary.questions, requestedSize, mistakesCap)
+        val session = stats.selectSession(questionary, requestedSize, mistakesCap)
         val sessionSize = session.size
         setContent {
             ExitConfirmation()
@@ -144,7 +142,7 @@ class QuestionaryActivity() : ComponentActivity() {
             IconButton(
                 enabled = !isDisabled,
                 onClick = {
-                    this@QuestionaryActivity.stats.recordAttempt(currentQuestion.text, true)
+                    this@QuestionaryActivity.stats.record(currentQuestion, true)
                     stats.value.correct++
                     if (indexes.size == 1) {
                         finish()
@@ -164,7 +162,7 @@ class QuestionaryActivity() : ComponentActivity() {
             IconButton(
                 enabled = !isDisabled,
                 onClick = {
-                    this@QuestionaryActivity.stats.recordAttempt(currentQuestion.text, false)
+                    this@QuestionaryActivity.stats.record(currentQuestion, false)
                     stats.value.incorrect++
                     if (indexes.size == 1) {
                         finish()

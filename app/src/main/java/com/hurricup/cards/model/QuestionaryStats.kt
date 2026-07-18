@@ -9,11 +9,9 @@ private const val HALFLIFE_DAYS = 7.0
 private const val MAX_AGE_DAYS = 28.0
 private const val RIGHT_WEIGHT = -0.5
 private const val WRONG_WEIGHT = 1.0
-const val DEFAULT_SESSION_SIZE = 50
-private const val MISTAKES_CAP = 0.5
 
 /**
- * Tracks per-question answer history and uses it to compose learning sessions.
+ * Per-question answer history for a single questionary id, persisted as one JSON file.
  *
  * Each answer (right or wrong) is recorded with a timestamp. Every past attempt contributes to
  * the question's score with a weight that decays exponentially over time
@@ -24,19 +22,8 @@ private const val MISTAKES_CAP = 0.5
  * where weight is [WRONG_WEIGHT] (+1.0) for a wrong answer and [RIGHT_WEIGHT] (-0.5) for a
  * correct one. Attempts older than [MAX_AGE_DAYS] days are pruned on load.
  *
- * Session composition ([selectSession]):
- *   1. Questions are split into three piles by score:
- *      - **Mistakes** (score > 0): recently wrong questions.
- *      - **New** (no attempts): never seen before.
- *      - **Known** (score ≤ 0): recently correct or well-learned.
- *   2. Up to a configurable cap ([MISTAKES_CAP] by default) of session slots go to mistakes, worst first.
- *   3. Remaining slots are filled from new (random order).
- *   4. If still slots left, filled from known (oldest last-asked first).
- *   5. The final list is shuffled.
- *
- * Also tracks last-asked timestamp per question for the known pile ordering.
- *
- * Stats are persisted as a JSON file per questionary in the app's internal storage.
+ * Session composition and per-questionary aggregation live in [StatsCoordinator], which routes
+ * each question to the store of its owning questionary id.
  */
 class QuestionaryStats(private val file: File) {
     private val attempts: MutableMap<String, MutableList<Attempt>> = mutableMapOf()
@@ -56,88 +43,13 @@ class QuestionaryStats(private val file: File) {
 
     fun lastAsked(questionText: String): Long = lastAsked[questionText] ?: 0L
 
-    fun distribution(questionary: Questionary, recentSince: Long): Distribution {
-        val now = System.currentTimeMillis()
-        var mistakes = 0
-        var new = 0
-        var known = 0
-        for (q in questionary.questions) {
-            when {
-                !hasAttempts(q.text) -> new++
-                score(q.text, now) > 0 -> mistakes++
-                else -> known++
-            }
-        }
-        val goal = minOf(DEFAULT_SESSION_SIZE, questionary.size)
-        return Distribution(mistakes, known, new, doneRecently = answersSince(questionary, recentSince) >= goal)
-    }
+    internal fun hasAttempts(questionText: String): Boolean = attempts.containsKey(questionText)
 
-    /** Number of answers recorded for this questionary's questions since [since]. */
-    private fun answersSince(questionary: Questionary, since: Long): Int {
-        val texts = questionary.questions.mapTo(HashSet()) { it.text }
-        return attempts.entries
-            .filter { it.key in texts }
-            .sumOf { entry -> entry.value.count { it.timestamp >= since } }
-    }
+    /** Number of answers recorded for [questionText] since [since]. */
+    internal fun answersSince(questionText: String, since: Long): Int =
+        attempts[questionText]?.count { it.timestamp >= since } ?: 0
 
-    fun selectSession(
-        questions: List<Question>,
-        sessionSize: Int = DEFAULT_SESSION_SIZE,
-        mistakesCap: Double = MISTAKES_CAP,
-    ): List<Int> {
-        val now = System.currentTimeMillis()
-        val size = minOf(sessionSize, questions.size)
-
-        val scored = questions.indices.map { i -> i to score(questions[i].text, now) }
-        val mistakes = mutableListOf<Int>()
-        val new = mutableListOf<Int>()
-        val known = mutableListOf<Int>()
-
-        for ((i, s) in scored) {
-            val text = questions[i].text
-            when {
-                !hasAttempts(text) -> new.add(i)
-                s > 0 -> mistakes.add(i)
-                else -> known.add(i)
-            }
-        }
-
-        return composeSession(size, mistakes, new, known, questions, now, mistakesCap)
-    }
-
-    private fun hasAttempts(questionText: String): Boolean = attempts.containsKey(questionText)
-
-    private fun composeSession(
-        size: Int,
-        mistakes: MutableList<Int>,
-        new: MutableList<Int>,
-        known: MutableList<Int>,
-        questions: List<Question>,
-        now: Long,
-        mistakesCap: Double,
-    ): List<Int> {
-        val result = mutableListOf<Int>()
-
-        // up to mistakesCap of the session from mistakes, worst first
-        mistakes.sortByDescending { score(questions[it].text, now) }
-        val mistakesSlots = (size * mistakesCap).toInt()
-        result.addAll(mistakes.take(mistakesSlots))
-
-        // fill rest with new, in random order
-        new.shuffle()
-        result.addAll(new.take(size - result.size))
-
-        // if still slots left, take oldest known
-        if (result.size < size) {
-            known.sortBy { lastAsked(questions[it].text) }
-            result.addAll(known.take(size - result.size))
-        }
-
-        result.shuffle()
-        return result
-    }
-
-    private fun score(questionText: String, now: Long): Double {
+    internal fun score(questionText: String, now: Long): Double {
         val list = attempts[questionText] ?: return 0.0
         return list.sumOf { attempt ->
             val ageDays = (now - attempt.timestamp) / (1000.0 * 60 * 60 * 24)
@@ -197,12 +109,6 @@ class QuestionaryStats(private val file: File) {
         file.writeText(json.toString())
     }
 
-    companion object {
-        fun forQuestionary(filesDir: File, questionary: Questionary): QuestionaryStats {
-            val safeName = questionary.id.replace(Regex("[^\\w]"), "_") + ".json"
-            return QuestionaryStats(File(filesDir, "stats/$safeName"))
-        }
-    }
 }
 
 data class Distribution(val mistakes: Int, val known: Int, val new: Int, val doneRecently: Boolean = false) {
