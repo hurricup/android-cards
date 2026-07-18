@@ -29,7 +29,7 @@ private const val MISTAKES_CAP = 0.5
  *      - **Mistakes** (score > 0): recently wrong questions.
  *      - **New** (no attempts): never seen before.
  *      - **Known** (score ≤ 0): recently correct or well-learned.
- *   2. Up to [MISTAKES_CAP] (50%) of session slots go to mistakes, worst first.
+ *   2. Up to a configurable cap ([MISTAKES_CAP] by default) of session slots go to mistakes, worst first.
  *   3. Remaining slots are filled from new (random order).
  *   4. If still slots left, filled from known (oldest last-asked first).
  *   5. The final list is shuffled.
@@ -80,7 +80,11 @@ class QuestionaryStats(private val file: File) {
             .sumOf { entry -> entry.value.count { it.timestamp >= since } }
     }
 
-    fun selectSession(questions: List<Question>, sessionSize: Int = DEFAULT_SESSION_SIZE): List<Int> {
+    fun selectSession(
+        questions: List<Question>,
+        sessionSize: Int = DEFAULT_SESSION_SIZE,
+        mistakesCap: Double = MISTAKES_CAP,
+    ): List<Int> {
         val now = System.currentTimeMillis()
         val size = minOf(sessionSize, questions.size)
 
@@ -98,7 +102,7 @@ class QuestionaryStats(private val file: File) {
             }
         }
 
-        return composeSession(size, mistakes, new, known, questions, now)
+        return composeSession(size, mistakes, new, known, questions, now, mistakesCap)
     }
 
     private fun hasAttempts(questionText: String): Boolean = attempts.containsKey(questionText)
@@ -109,13 +113,14 @@ class QuestionaryStats(private val file: File) {
         new: MutableList<Int>,
         known: MutableList<Int>,
         questions: List<Question>,
-        now: Long
+        now: Long,
+        mistakesCap: Double,
     ): List<Int> {
         val result = mutableListOf<Int>()
 
-        // up to 50% from mistakes, worst first
+        // up to mistakesCap of the session from mistakes, worst first
         mistakes.sortByDescending { score(questions[it].text, now) }
-        val mistakesSlots = (size * MISTAKES_CAP).toInt()
+        val mistakesSlots = (size * mistakesCap).toInt()
         result.addAll(mistakes.take(mistakesSlots))
 
         // fill rest with new, in random order

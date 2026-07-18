@@ -30,6 +30,7 @@ import androidx.compose.ui.window.Popup
 import androidx.core.content.edit
 import com.hurricup.cards.model.*
 import com.hurricup.cards.ui.theme.AndroidCardsTheme
+import kotlin.math.roundToInt
 import java.io.File
 
 private const val DAY_MS = 24L * 60 * 60 * 1000
@@ -41,9 +42,10 @@ class MainActivity : ComponentActivity() {
     private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
     private var reverseModes = mutableStateOf<Map<String, Boolean>>(emptyMap())
     private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
+    private var mistakesCapPercent = mutableStateOf(DEFAULT_MISTAKES_CAP_PERCENT)
 
     private val prefs: SharedPreferences by lazy {
-        getSharedPreferences("card_settings", MODE_PRIVATE)
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
     }
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
@@ -61,6 +63,7 @@ class MainActivity : ComponentActivity() {
         } + Questionary.generateAll()
         loadReverseModes()
         recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
+        mistakesCapPercent.value = prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -99,11 +102,17 @@ class MainActivity : ComponentActivity() {
         refreshDistributions()
     }
 
+    private fun setMistakesCapPercent(percent: Int) {
+        prefs.edit { putInt(MISTAKES_CAP_PERCENT_KEY, percent) }
+        mistakesCapPercent.value = percent
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun SettingsBar() {
         var expanded by remember { mutableStateOf(false) }
         var windowSubmenu by remember { mutableStateOf(false) }
+        var capSubmenu by remember { mutableStateOf(false) }
         TopAppBar(
             title = {},
             actions = {
@@ -117,7 +126,7 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                     DropdownMenu(
-                        expanded = expanded && !windowSubmenu,
+                        expanded = expanded && !windowSubmenu && !capSubmenu,
                         onDismissRequest = { expanded = false }
                     ) {
                         DropdownMenuItem(
@@ -131,6 +140,10 @@ class MainActivity : ComponentActivity() {
                         DropdownMenuItem(
                             text = { Text("Recent window: ${recentWindowDays.value}d") },
                             onClick = { windowSubmenu = true }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Hard questions: ${mistakesCapPercent.value}%") },
+                            onClick = { capSubmenu = true }
                         )
                     }
                     DropdownMenu(
@@ -148,6 +161,20 @@ class MainActivity : ComponentActivity() {
                                     windowSubmenu = false
                                     expanded = false
                                 }
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = capSubmenu,
+                        onDismissRequest = { capSubmenu = false; expanded = false }
+                    ) {
+                        Column(modifier = Modifier.width(260.dp).padding(horizontal = 16.dp)) {
+                            Text("Hard questions: ${mistakesCapPercent.value}%")
+                            Slider(
+                                value = mistakesCapPercent.value.toFloat(),
+                                onValueChange = { mistakesCapPercent.value = it.roundToInt() },
+                                onValueChangeFinished = { setMistakesCapPercent(mistakesCapPercent.value) },
+                                valueRange = 0f..100f
                             )
                         }
                     }
