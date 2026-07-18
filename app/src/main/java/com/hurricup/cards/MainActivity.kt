@@ -138,7 +138,10 @@ class MainActivity : ComponentActivity() {
                             onClick = { expanded = false; importLauncher.launch("application/zip") }
                         )
                         DropdownMenuItem(
-                            text = { Text("Recent window: ${recentWindowDays.value}d") },
+                            text = {
+                                val days = recentWindowDays.value
+                                Text("Recent window: $days ${if (days == 1) "day" else "days"}")
+                            },
                             onClick = { windowSubmenu = true }
                         )
                         DropdownMenuItem(
