@@ -26,6 +26,9 @@ open class Questionary(val title: String, val id: String = title) {
 
     operator fun get(index: Int) = _questions[index]
 
+    /** The questionaries that actually own questions. A plain questionary is its own leaf. */
+    open fun leafQuestionaries(): List<Questionary> = listOf(this)
+
     fun passWith(intent: Intent) = intent.putExtra(INTENT_KEY, id)
 
     companion object {

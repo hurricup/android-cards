@@ -53,7 +53,12 @@ class SearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        val allQuestions = Questionary.cache.values.flatMap { it.questions }
+        // Composites reuse their parts' questions; collect leaf questionaries and dedupe by id
+        // so each leaf is searched once.
+        val allQuestions = Questionary.cache.values
+            .flatMap { it.leafQuestionaries() }
+            .distinctBy { it.id }
+            .flatMap { it.questions }
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {

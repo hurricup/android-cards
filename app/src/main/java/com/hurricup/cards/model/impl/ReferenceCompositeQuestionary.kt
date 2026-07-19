@@ -18,18 +18,20 @@ class ReferenceCompositeQuestionary(
 ) : Questionary(title, id) {
 
     override val _questions: MutableList<Question> by lazy {
-        collect(HashSet()).toMutableList()
+        leafQuestionaries().flatMap { it.questions }.toMutableList()
     }
+
+    override fun leafQuestionaries(): List<Questionary> = collectLeaves(HashSet())
 
     private fun targetId(refId: String) = if (reverse) "$refId$REVERSE_SUFFIX" else refId
 
-    private fun collect(stack: MutableSet<String>): List<Question> {
+    private fun collectLeaves(stack: MutableSet<String>): List<Questionary> {
         if (!stack.add(id)) return emptyList() // recursion — stop this branch
         val result = refIds.flatMap { refId ->
             when (val part = Questionary.cache[targetId(refId)]) {
                 null -> emptyList()
-                is ReferenceCompositeQuestionary -> part.collect(stack)
-                else -> part.questions
+                is ReferenceCompositeQuestionary -> part.collectLeaves(stack)
+                else -> listOf(part)
             }
         }
         stack.remove(id)
