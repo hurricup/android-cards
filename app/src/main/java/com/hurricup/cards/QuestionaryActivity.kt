@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import com.hurricup.cards.model.DEFAULT_MAX_AGE_DAYS
 import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
 import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
@@ -60,7 +61,11 @@ class QuestionaryActivity() : ComponentActivity() {
     private val questionary: Questionary
         get() = Questionary.from(intent)
 
-    private val stats: StatsCoordinator by lazy { StatsCoordinator(filesDir) }
+    private val stats: StatsCoordinator by lazy {
+        val maxAgeDays = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getInt(MAX_AGE_DAYS_KEY, DEFAULT_MAX_AGE_DAYS)
+        StatsCoordinator(filesDir, maxAgeDays.toDouble())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

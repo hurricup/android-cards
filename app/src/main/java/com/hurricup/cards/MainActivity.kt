@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
     private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
     private var mistakesCapPercent = mutableStateOf(DEFAULT_MISTAKES_CAP_PERCENT)
     private var mistakesCapOverrides = mutableStateOf<Map<String, Int>>(emptyMap())
+    private var maxAgeDays = mutableStateOf(DEFAULT_MAX_AGE_DAYS)
 
     private val prefs: SharedPreferences by lazy {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -66,6 +67,7 @@ class MainActivity : ComponentActivity() {
         recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
         mistakesCapPercent.value = prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
         loadMistakesCapOverrides()
+        maxAgeDays.value = prefs.getInt(MAX_AGE_DAYS_KEY, DEFAULT_MAX_AGE_DAYS)
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -112,6 +114,12 @@ class MainActivity : ComponentActivity() {
         mistakesCapPercent.value = percent
     }
 
+    private fun setMaxAgeDays(days: Int) {
+        prefs.edit { putInt(MAX_AGE_DAYS_KEY, days) }
+        maxAgeDays.value = days
+        refreshDistributions()
+    }
+
     private fun loadMistakesCapOverrides() {
         mistakesCapOverrides.value = prefs.all.entries
             .filter { it.key.startsWith(MISTAKES_CAP_OVERRIDE_PREFIX) && it.value is Int }
@@ -135,6 +143,7 @@ class MainActivity : ComponentActivity() {
         var expanded by remember { mutableStateOf(false) }
         var windowSubmenu by remember { mutableStateOf(false) }
         var capSubmenu by remember { mutableStateOf(false) }
+        var maxAgeSubmenu by remember { mutableStateOf(false) }
         TopAppBar(
             title = {},
             actions = {
@@ -148,7 +157,7 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                     DropdownMenu(
-                        expanded = expanded && !windowSubmenu && !capSubmenu,
+                        expanded = expanded && !windowSubmenu && !capSubmenu && !maxAgeSubmenu,
                         onDismissRequest = { expanded = false }
                     ) {
                         DropdownMenuItem(
@@ -169,6 +178,13 @@ class MainActivity : ComponentActivity() {
                         DropdownMenuItem(
                             text = { Text("Hard questions: ${mistakesCapPercent.value}%") },
                             onClick = { capSubmenu = true }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                val days = maxAgeDays.value
+                                Text("Max age: $days ${if (days == 1) "day" else "days"}")
+                            },
+                            onClick = { maxAgeSubmenu = true }
                         )
                     }
                     DropdownMenu(
@@ -200,6 +216,20 @@ class MainActivity : ComponentActivity() {
                                 onValueChange = { mistakesCapPercent.value = it.roundToInt() },
                                 onValueChangeFinished = { setMistakesCapPercent(mistakesCapPercent.value) },
                                 valueRange = 0f..100f
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = maxAgeSubmenu,
+                        onDismissRequest = { maxAgeSubmenu = false; expanded = false }
+                    ) {
+                        Column(modifier = Modifier.width(260.dp).padding(horizontal = 16.dp)) {
+                            Text("Max age: ${maxAgeDays.value} days")
+                            Slider(
+                                value = maxAgeDays.value.toFloat(),
+                                onValueChange = { maxAgeDays.value = it.roundToInt() },
+                                onValueChangeFinished = { setMaxAgeDays(maxAgeDays.value) },
+                                valueRange = 1f..90f
                             )
                         }
                     }
@@ -239,7 +269,7 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshDistributions() {
         val since = System.currentTimeMillis() - recentWindowDays.value * DAY_MS
-        val coordinator = StatsCoordinator(filesDir)
+        val coordinator = StatsCoordinator(filesDir, maxAgeDays.value.toDouble())
         distributions.value = questionaries.flatMap { q ->
             listOf(q, Questionary.reverseOf(q)).map {
                 it.id to coordinator.distribution(it, since)

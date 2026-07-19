@@ -3,6 +3,7 @@ package com.hurricup.cards.model
 import java.io.File
 
 const val DEFAULT_SESSION_SIZE = 50
+const val DEFAULT_MAX_AGE_DAYS = 28
 private const val MISTAKES_CAP = 0.5
 
 /**
@@ -13,12 +14,15 @@ private const val MISTAKES_CAP = 0.5
  * Session composition (three piles, oldest-first mistakes capped, new, then oldest known)
  * and per-questionary aggregation live here; the per-file storage is [QuestionaryStats].
  */
-class StatsCoordinator(private val filesDir: File) {
+class StatsCoordinator(
+    private val filesDir: File,
+    private val maxAgeDays: Double = DEFAULT_MAX_AGE_DAYS.toDouble(),
+) {
     private val byId = HashMap<String, QuestionaryStats>()
 
     private fun statsFor(id: String): QuestionaryStats = byId.getOrPut(id) {
         val safeName = id.replace(Regex("[^\\w]"), "_") + ".json"
-        QuestionaryStats(File(filesDir, "stats/$safeName"))
+        QuestionaryStats(File(filesDir, "stats/$safeName"), maxAgeDays)
     }
 
     private fun statsOf(question: Question) = statsFor(question.questionaryId)

@@ -5,27 +5,29 @@ import org.json.JSONObject
 import java.io.File
 import kotlin.math.exp
 
-private const val HALFLIFE_DAYS = 7.0
-private const val MAX_AGE_DAYS = 28.0
 private const val RIGHT_WEIGHT = -0.5
 private const val WRONG_WEIGHT = 1.0
+
+/** Number of halflives after which an attempt's weight (~2%) is considered negligible and pruned. */
+private const val MAX_AGE_HALFLIVES = 4.0
 
 /**
  * Per-question answer history for a single questionary id, persisted as one JSON file.
  *
  * Each answer (right or wrong) is recorded with a timestamp. Every past attempt contributes to
- * the question's score with a weight that decays exponentially over time
- * (halflife = [HALFLIFE_DAYS] days):
+ * the question's score with a weight that decays exponentially over time. The decay halflife is
+ * derived from [maxAgeDays] (halflife = maxAgeDays / [MAX_AGE_HALFLIVES]):
  *
  *   score = Σ  weight × e^(-age_days / halflife)
  *
  * where weight is [WRONG_WEIGHT] (+1.0) for a wrong answer and [RIGHT_WEIGHT] (-0.5) for a
- * correct one. Attempts older than [MAX_AGE_DAYS] days are pruned on load.
+ * correct one. Attempts older than [maxAgeDays] days are pruned on load.
  *
  * Session composition and per-questionary aggregation live in [StatsCoordinator], which routes
  * each question to the store of its owning questionary id.
  */
-class QuestionaryStats(private val file: File) {
+class QuestionaryStats(private val file: File, private val maxAgeDays: Double) {
+    private val halflifeDays = maxAgeDays / MAX_AGE_HALFLIVES
     private val attempts: MutableMap<String, MutableList<Attempt>> = mutableMapOf()
     private val lastAsked: MutableMap<String, Long> = mutableMapOf()
 
@@ -53,7 +55,7 @@ class QuestionaryStats(private val file: File) {
         val list = attempts[questionText] ?: return 0.0
         return list.sumOf { attempt ->
             val ageDays = (now - attempt.timestamp) / (1000.0 * 60 * 60 * 24)
-            val decay = exp(-ageDays / HALFLIFE_DAYS)
+            val decay = exp(-ageDays / halflifeDays)
             val weight = if (attempt.correct) RIGHT_WEIGHT else WRONG_WEIGHT
             weight * decay
         }
@@ -63,7 +65,7 @@ class QuestionaryStats(private val file: File) {
         if (!file.exists()) return
         val json = JSONObject(file.readText())
         val now = System.currentTimeMillis()
-        val maxAgeMs = MAX_AGE_DAYS * 24 * 60 * 60 * 1000
+        val maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000
         for (key in json.keys()) {
             val entry = json.get(key)
             val arr = when (entry) {
