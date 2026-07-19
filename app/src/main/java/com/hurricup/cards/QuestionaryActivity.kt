@@ -65,9 +65,12 @@ class QuestionaryActivity() : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val requestedSize = intent.getIntExtra(SESSION_SIZE_KEY, DEFAULT_SESSION_SIZE)
-        val mistakesCap = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT) / 100.0
-        val session = stats.selectSession(questionary, requestedSize, mistakesCap)
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val overrideKey = MISTAKES_CAP_OVERRIDE_PREFIX + questionary.id
+        val mistakesPercent =
+            if (prefs.contains(overrideKey)) prefs.getInt(overrideKey, DEFAULT_MISTAKES_CAP_PERCENT)
+            else prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
+        val session = stats.selectSession(questionary, requestedSize, mistakesPercent / 100.0)
         val sessionSize = session.size
         setContent {
             ExitConfirmation()

@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
     private var reverseModes = mutableStateOf<Map<String, Boolean>>(emptyMap())
     private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
     private var mistakesCapPercent = mutableStateOf(DEFAULT_MISTAKES_CAP_PERCENT)
+    private var mistakesCapOverrides = mutableStateOf<Map<String, Int>>(emptyMap())
 
     private val prefs: SharedPreferences by lazy {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
         loadReverseModes()
         recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
         mistakesCapPercent.value = prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
+        loadMistakesCapOverrides()
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -77,6 +79,9 @@ class MainActivity : ComponentActivity() {
                         distributions.value,
                         reverseModes.value,
                         ::toggleReverseMode,
+                        mistakesCapPercent.value,
+                        mistakesCapOverrides.value,
+                        ::setMistakesCapOverride,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -105,6 +110,23 @@ class MainActivity : ComponentActivity() {
     private fun setMistakesCapPercent(percent: Int) {
         prefs.edit { putInt(MISTAKES_CAP_PERCENT_KEY, percent) }
         mistakesCapPercent.value = percent
+    }
+
+    private fun loadMistakesCapOverrides() {
+        mistakesCapOverrides.value = prefs.all.entries
+            .filter { it.key.startsWith(MISTAKES_CAP_OVERRIDE_PREFIX) && it.value is Int }
+            .associate { it.key.removePrefix(MISTAKES_CAP_OVERRIDE_PREFIX) to it.value as Int }
+    }
+
+    /** [percent] null clears the override (falls back to the app-level setting). */
+    private fun setMistakesCapOverride(id: String, percent: Int?) {
+        prefs.edit {
+            if (percent == null) remove(MISTAKES_CAP_OVERRIDE_PREFIX + id)
+            else putInt(MISTAKES_CAP_OVERRIDE_PREFIX + id, percent)
+        }
+        mistakesCapOverrides.value =
+            if (percent == null) mistakesCapOverrides.value - id
+            else mistakesCapOverrides.value + (id to percent)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -238,6 +260,9 @@ fun Questionaries(
     distributions: Map<String, Distribution>,
     reverseModes: Map<String, Boolean>,
     onToggleReverse: (String) -> Unit,
+    appMistakesCapPercent: Int,
+    mistakesCapOverrides: Map<String, Int>,
+    onSetMistakesCapOverride: (String, Int?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -290,7 +315,16 @@ fun Questionaries(
                     else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                     modifier = Modifier.weight(1f)
                 )
-                SessionMenu(half, double, isReverse, { onToggleReverse(questionary.id) }) { launch(it) }
+                SessionMenu(
+                    half = half,
+                    double = double,
+                    isReverse = isReverse,
+                    onToggleReverse = { onToggleReverse(questionary.id) },
+                    appMistakesCapPercent = appMistakesCapPercent,
+                    overrideMistakesCapPercent = mistakesCapOverrides[active.id],
+                    onSetMistakesCapOverride = { onSetMistakesCapOverride(active.id, it) },
+                    onSelect = { launch(it) },
+                )
             }
         }
     }
@@ -302,14 +336,21 @@ private fun SessionMenu(
     double: Int,
     isReverse: Boolean,
     onToggleReverse: () -> Unit,
+    appMistakesCapPercent: Int,
+    overrideMistakesCapPercent: Int?,
+    onSetMistakesCapOverride: (Int?) -> Unit,
     onSelect: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var capSubmenu by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "Session options")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded && !capSubmenu,
+            onDismissRequest = { expanded = false }
+        ) {
             DropdownMenuItem(
                 text = { Text("Sprint ($half)") },
                 onClick = { expanded = false; onSelect(half) }
@@ -325,6 +366,37 @@ private fun SessionMenu(
                 } else null,
                 onClick = { expanded = false; onToggleReverse() }
             )
+            val capLabel = overrideMistakesCapPercent?.let { "$it%" } ?: "default"
+            DropdownMenuItem(
+                text = { Text("Hard questions: $capLabel") },
+                onClick = { capSubmenu = true }
+            )
+        }
+        DropdownMenu(
+            expanded = capSubmenu,
+            onDismissRequest = { capSubmenu = false; expanded = false }
+        ) {
+            Column(modifier = Modifier.width(280.dp).padding(horizontal = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = overrideMistakesCapPercent != null,
+                        onCheckedChange = { checked ->
+                            onSetMistakesCapOverride(if (checked) appMistakesCapPercent else null)
+                        }
+                    )
+                    Text("Override app default")
+                }
+                Text(
+                    overrideMistakesCapPercent?.let { "Hard questions: $it%" }
+                        ?: "Hard questions: default ($appMistakesCapPercent%)"
+                )
+                Slider(
+                    value = (overrideMistakesCapPercent ?: appMistakesCapPercent).toFloat(),
+                    onValueChange = { onSetMistakesCapOverride(it.roundToInt()) },
+                    valueRange = 0f..100f,
+                    enabled = overrideMistakesCapPercent != null,
+                )
+            }
         }
     }
 }
