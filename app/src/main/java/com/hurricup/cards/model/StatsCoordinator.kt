@@ -10,7 +10,7 @@ private const val MISTAKES_CAP = 0.5
  * ([Question.questionaryId]), so a question keeps one history regardless of which
  * questionary (plain or composite) shows it.
  *
- * Session composition (three piles, worst-first mistakes capped, new, then oldest known)
+ * Session composition (three piles, oldest-first mistakes capped, new, then oldest known)
  * and per-questionary aggregation live here; the per-file storage is [QuestionaryStats].
  */
 class StatsCoordinator(private val filesDir: File) {
@@ -29,7 +29,7 @@ class StatsCoordinator(private val filesDir: File) {
     /**
      * Composes a session over [questionary]'s questions:
      *   1. Split into mistakes (score > 0) / new (no attempts) / known (score ≤ 0).
-     *   2. Up to [mistakesCap] of the slots from mistakes, worst first.
+     *   2. Up to [mistakesCap] of the slots from mistakes, least-recently-seen first.
      *   3. Fill the rest with new (random), then oldest known.
      *   4. Shuffle the result.
      * Returns indices into [Questionary.questions].
@@ -57,8 +57,8 @@ class StatsCoordinator(private val filesDir: File) {
         }
 
         val result = mutableListOf<Int>()
-        // up to mistakesCap of the session from mistakes, worst first
-        mistakes.sortByDescending { statsOf(questions[it]).score(questions[it].text, now) }
+        // up to mistakesCap of the session from mistakes, least-recently-seen first
+        mistakes.sortBy { statsOf(questions[it]).lastAsked(questions[it].text) }
         result.addAll(mistakes.take((size * mistakesCap).toInt()))
 
         // fill rest with new, in random order
