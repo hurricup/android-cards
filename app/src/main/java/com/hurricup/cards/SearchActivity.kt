@@ -17,11 +17,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hurricup.cards.model.Question
@@ -71,8 +74,11 @@ class SearchActivity : ComponentActivity() {
 @Composable
 private fun SearchScreen(allQuestions: List<Question>) {
     var query by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
 
     val results = remember(query) { search(query, allQuestions) }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Column(
@@ -85,7 +91,8 @@ private fun SearchScreen(allQuestions: List<Question>) {
                 onValueChange = { query = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(8.dp)
+                    .focusRequester(focusRequester),
                 placeholder = { Text("Search...") },
                 singleLine = true
             )
