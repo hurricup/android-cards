@@ -90,6 +90,7 @@ class StatsCoordinator(
         var new = 0
         var known = 0
         var recent = 0
+        var oldestAnsweredAt: Long? = null
         for (q in questionary.questions) {
             val stats = statsOf(q)
             when {
@@ -97,9 +98,15 @@ class StatsCoordinator(
                 stats.score(q.text, now) > 0 -> mistakes++
                 else -> known++
             }
+            if (stats.hasAttempts(q.text)) {
+                val lastAsked = stats.lastAsked(q.text)
+                if (oldestAnsweredAt == null || lastAsked < oldestAnsweredAt) {
+                    oldestAnsweredAt = lastAsked
+                }
+            }
             recent += stats.answersSince(q.text, recentSince)
         }
         val goal = minOf(DEFAULT_SESSION_SIZE, questionary.size)
-        return Distribution(mistakes, known, new, doneRecently = recent >= goal)
+        return Distribution(mistakes, known, new, doneRecently = recent >= goal, oldestAnsweredAt = oldestAnsweredAt)
     }
 }

@@ -169,10 +169,7 @@ class MainActivity : ComponentActivity() {
                             onClick = { expanded = false; importLauncher.launch("application/zip") }
                         )
                         DropdownMenuItem(
-                            text = {
-                                val days = recentWindowDays.value
-                                Text("Recent window: $days ${if (days == 1) "day" else "days"}")
-                            },
+                            text = { Text("Recent window: ${days(recentWindowDays.value)}") },
                             onClick = { windowSubmenu = true }
                         )
                         DropdownMenuItem(
@@ -180,10 +177,7 @@ class MainActivity : ComponentActivity() {
                             onClick = { capSubmenu = true }
                         )
                         DropdownMenuItem(
-                            text = {
-                                val days = maxAgeDays.value
-                                Text("Max age: $days ${if (days == 1) "day" else "days"}")
-                            },
+                            text = { Text("Max age: ${days(maxAgeDays.value)}") },
                             onClick = { maxAgeSubmenu = true }
                         )
                     }
@@ -191,14 +185,14 @@ class MainActivity : ComponentActivity() {
                         expanded = windowSubmenu,
                         onDismissRequest = { windowSubmenu = false; expanded = false }
                     ) {
-                        for (days in 1..7) {
+                        for (d in 1..7) {
                             DropdownMenuItem(
-                                text = { Text("$days ${if (days == 1) "day" else "days"}") },
-                                trailingIcon = if (days == recentWindowDays.value) {
+                                text = { Text(days(d)) },
+                                trailingIcon = if (d == recentWindowDays.value) {
                                     { Icon(Icons.Filled.Check, contentDescription = null) }
                                 } else null,
                                 onClick = {
-                                    setRecentWindowDays(days)
+                                    setRecentWindowDays(d)
                                     windowSubmenu = false
                                     expanded = false
                                 }
@@ -224,7 +218,7 @@ class MainActivity : ComponentActivity() {
                         onDismissRequest = { maxAgeSubmenu = false; expanded = false }
                     ) {
                         Column(modifier = Modifier.width(260.dp).padding(horizontal = 16.dp)) {
-                            Text("Max age: ${maxAgeDays.value} days")
+                            Text("Max age: ${days(maxAgeDays.value)}")
                             Slider(
                                 value = maxAgeDays.value.toFloat(),
                                 onValueChange = { maxAgeDays.value = it.roundToInt() },
@@ -435,6 +429,14 @@ private val pieRed = Color(0xFFBB6666)
 private val pieGreen = Color(0xFF66BB66)
 private val pieGray = Color(0xFFD5D5D5)
 
+private fun days(count: Int): String = "$count ${if (count == 1) "day" else "days"}"
+
+private fun formatAge(millis: Long): String {
+    val hours = (millis / (1000 * 60 * 60)).toInt()
+    if (hours < 24) return "$hours ${if (hours == 1) "hour" else "hours"}"
+    return days(hours / 24)
+}
+
 @Composable
 private fun PieChart(dist: Distribution) {
     var showTooltip by remember { mutableStateOf(false) }
@@ -476,6 +478,9 @@ private fun PieChart(dist: Distribution) {
                         Text("Mistakes: ${dist.mistakes}", color = pieRed, fontSize = 14.sp)
                         Text("Known: ${dist.known}", color = pieGreen, fontSize = 14.sp)
                         Text("New: ${dist.new}", color = pieGray, fontSize = 14.sp)
+                        dist.oldestAnsweredAt?.let {
+                            Text("Oldest: ${formatAge(System.currentTimeMillis() - it)}", fontSize = 14.sp)
+                        }
                     }
                 }
             }

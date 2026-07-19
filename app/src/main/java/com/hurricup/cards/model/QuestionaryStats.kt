@@ -113,7 +113,13 @@ class QuestionaryStats(private val file: File, private val maxAgeDays: Double) {
 
 }
 
-data class Distribution(val mistakes: Int, val known: Int, val new: Int, val doneRecently: Boolean = false) {
+data class Distribution(
+    val mistakes: Int,
+    val known: Int,
+    val new: Int,
+    val doneRecently: Boolean = false,
+    val oldestAnsweredAt: Long? = null,
+) {
     val total get() = mistakes + known + new
 }
 
