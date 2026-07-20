@@ -6,6 +6,9 @@ const val DEFAULT_SESSION_SIZE = 50
 const val DEFAULT_MAX_AGE_DAYS = 28
 private const val MISTAKES_CAP = 0.5
 
+/** Known reinforcement is sampled from this multiple of the needed slots (oldest first), for variety. */
+private const val KNOWN_POOL_FACTOR = 1.5
+
 /**
  * Routes stats operations to the per-questionary-id store that owns each question
  * ([Question.questionaryId]), so a question keeps one history regardless of which
@@ -34,7 +37,8 @@ class StatsCoordinator(
      * Composes a session over [questionary]'s questions:
      *   1. Split into mistakes (score > 0) / new (no attempts) / known (score ≤ 0).
      *   2. Up to [mistakesCap] of the slots from mistakes, least-recently-seen first.
-     *   3. Fill the rest with new (random), then oldest known.
+     *   3. Fill the rest with new (random), then known sampled from an oldest-first pool
+     *      ([KNOWN_POOL_FACTOR]× the needed slots) for between-session variety.
      *   4. Shuffle the result.
      * Returns indices into [Questionary.questions].
      */
@@ -69,10 +73,14 @@ class StatsCoordinator(
         new.shuffle()
         result.addAll(new.take(size - result.size))
 
-        // if still slots left, take oldest known
+        // if still slots left, reinforce known: sample from a slightly larger oldest pool so
+        // reinforcement varies between sessions instead of repeating the same oldest set
         if (result.size < size) {
+            val slots = size - result.size
             known.sortBy { statsOf(questions[it]).lastAsked(questions[it].text) }
-            result.addAll(known.take(size - result.size))
+            val pool = known.take((slots * KNOWN_POOL_FACTOR).toInt()).toMutableList()
+            pool.shuffle()
+            result.addAll(pool.take(slots))
         }
 
         result.shuffle()
