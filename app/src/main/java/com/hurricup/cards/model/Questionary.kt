@@ -116,22 +116,31 @@ open class Questionary(val title: String, val id: String = title) {
             return all
         }
 
-        internal fun readFile(inputStream: InputStream, direct: Boolean = true): List<Questionary> {
+        internal fun readFile(inputStream: InputStream, direct: Boolean = true): List<Questionary> =
+            parseFile(inputStream).map { parsed ->
+                val q = if (parsed.refIds != null) {
+                    cacheReferenceComposite(parsed.title, parsed.id, parsed.refIds)
+                } else {
+                    cacheProcessed(parsed.title, parsed.id, parsed.questions)
+                }
+                if (direct) q else reverseOf(q)
+            }
+
+        /** Parses a file into raw questionaries without processing variants or caching. */
+        internal fun parseFile(inputStream: InputStream): List<ParsedQuestionary> {
             val xmlParser = XmlPullParserFactory.newInstance().newPullParser()
             xmlParser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
             xmlParser.setInput(inputStream, null)
-            val questionaries = mutableListOf<Questionary>()
+            val result = mutableListOf<ParsedQuestionary>()
             while (xmlParser.next() != END_DOCUMENT) {
                 if (xmlParser.eventType == START_TAG && xmlParser.name == INTENT_KEY) {
-                    readQuestionary(xmlParser)?.let {
-                        questionaries.add(if (direct) it else reverseOf(it))
-                    }
+                    parseQuestionary(xmlParser)?.let { result.add(it) }
                 }
             }
-            return questionaries
+            return result
         }
 
-        private fun readQuestionary(xmlParser: XmlPullParser): Questionary? {
+        private fun parseQuestionary(xmlParser: XmlPullParser): ParsedQuestionary? {
             var title: String? = null
             var id: String? = null
             var questions: List<Question> = emptyList()
@@ -146,11 +155,7 @@ open class Questionary(val title: String, val id: String = title) {
                     }
                 }
             }
-            return title?.let {
-                val resolvedId = id ?: it
-                if (refIds != null) cacheReferenceComposite(it, resolvedId, refIds)
-                else cacheProcessed(it, resolvedId, questions)
-            }
+            return title?.let { ParsedQuestionary(it, id ?: it, questions, refIds) }
         }
 
         private fun readQuestionaryRefs(xmlParser: XmlPullParser): List<String> {
@@ -227,6 +232,14 @@ open class Questionary(val title: String, val id: String = title) {
         }
     }
 }
+
+/** A questionary parsed from XML before variant processing/caching. */
+internal data class ParsedQuestionary(
+    val title: String,
+    val id: String,
+    val questions: List<Question>,
+    val refIds: List<String>?,
+)
 
 /**
  * Makes typographic adjustments:
