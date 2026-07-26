@@ -11,21 +11,26 @@
 - Use the template itself as the internal ID for persistent scoring
 
 ## Stats improvements
-- Separate scoring window from retention window (e.g. score based on last week, but keep data for a month)
-- Configurable scoring/retention windows as user settings
 - Optional per-question stat display during exercise (configurable)
-- Configurable "trained" window: currently a hard limit (question/daily goal considered trained within a fixed period, e.g. 24/12 hours). Make this window user-configurable.
+- (done) Configurable max-age setting; halflife derived from it (maxAge/4)
+- (done) Configurable "recent window" for the trained/dimmed indicator
 
 ## Questionary mode (session composition)
 - Not a separate synthetic questionary — composites already exist (e.g. +/−). Instead add a session "mode" option.
 - Modes: normal (current three-pile algorithm), prioritize wrong, prioritize new, prioritize known.
 - Selected from the same per-questionary popup menu as direct/reverse order and session size.
 - Stats still counted against the respective source questionaries.
-- Window/session size should likewise be an option in the menu, not an immediate run.
 
-## Session question selection improvements
-- Session size configurable: global config with per-questionary override
-- Percentages (70% mistakes cap, 50/50 new/known split) configurable
+## Adjustable session size
+- Make base session size a setting: global default + per-questionary override (same UX as the hard-questions % override).
+- Currently only per-run Sprint/Default/Marathon options exist; Sprint/Marathon should derive from the configured base.
+- (done) mistakes cap % configurable, global + per-questionary override.
+
+## Mixed direct/reverse mode
+- Direction is currently binary per questionary (direct or reverse), persisted.
+- Add a "mixed" option that draws from both the direct and reverse variants in one session — trains production and comprehension together (needed: reverse-only practice makes speaking easier than understanding).
+- Natural fit: mixed = composite of the questionary's own direct + reverse variants; stats stay per-direction.
+- Selected from the same per-questionary menu as the reverse toggle (direct / reverse / mixed).
 
 ## Questionary options popup
 - ~~"..." button on questionary opens a popup menu~~ — done
