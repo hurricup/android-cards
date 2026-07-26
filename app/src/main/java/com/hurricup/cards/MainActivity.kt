@@ -393,6 +393,7 @@ fun Questionaries(
                 SessionMenu(
                     half = half,
                     double = double,
+                    globalMode = globalMode,
                     overrideMode = modeOverrides[questionary.id],
                     onSetModeOverride = { onSetModeOverride(questionary.id, it) },
                     appMistakesCapPercent = appMistakesCapPercent,
@@ -409,6 +410,7 @@ fun Questionaries(
 private fun SessionMenu(
     half: Int,
     double: Int,
+    globalMode: Mode,
     overrideMode: Mode?,
     onSetModeOverride: (Mode?) -> Unit,
     appMistakesCapPercent: Int,
@@ -436,7 +438,7 @@ private fun SessionMenu(
                 onClick = { expanded = false; onSelect(double) }
             )
             DropdownMenuItem(
-                text = { Text("Mode: ${overrideMode?.label ?: "Global"}") },
+                text = { Text("Mode: ${overrideMode?.label ?: "${globalMode.label} (global)"}") },
                 onClick = { modeSubmenu = true }
             )
             val capLabel = overrideMistakesCapPercent?.let { "$it%" } ?: "default"
@@ -450,7 +452,7 @@ private fun SessionMenu(
             onDismissRequest = { modeSubmenu = false; expanded = false }
         ) {
             DropdownMenuItem(
-                text = { Text("Global") },
+                text = { Text("${globalMode.label} (global)") },
                 trailingIcon = if (overrideMode == null) {
                     { Icon(Icons.Filled.Check, contentDescription = null) }
                 } else null,
