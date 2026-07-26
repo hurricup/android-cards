@@ -12,6 +12,15 @@ class XmlConsistencyTest {
 
     private val xmlDir = File("src/main/assets/xml")
 
+    /** Armenian emphasis/accent mark, dropped so accented and plain forms count as the same. */
+    private val accent = "՛"
+
+    private fun normalize(s: String?): String? = s
+        ?.replace(accent, "")
+        ?.replace(Regex("\\s+"), " ")            // collapse whitespace
+        ?.replace(Regex("\\s*([\\p{P}])\\s*"), "$1") // drop spaces around punctuation
+        ?.trim()
+
     @Test
     fun noDuplicateQuestions() {
         val files = xmlDir.listFiles { f -> f.extension == "xml" }
@@ -21,9 +30,9 @@ class XmlConsistencyTest {
         for (file in files!!) {
             val parsed = file.inputStream().use { Questionary.parseFile(it) }
             for (questionary in parsed) {
-                val seen = HashSet<Pair<String, String?>>()
+                val seen = HashSet<Pair<String?, String?>>()
                 for (q in questionary.questions) {
-                    if (!seen.add(q.text to q.answer)) {
+                    if (!seen.add(normalize(q.text) to normalize(q.answer))) {
                         duplicates.add("${file.name} / ${questionary.title}: '${q.text}' -> '${q.answer}'")
                     }
                 }
