@@ -12,11 +12,11 @@ class XmlConsistencyTest {
 
     private val xmlDir = File("src/main/assets/xml")
 
-    /** Armenian emphasis/accent mark, dropped so accented and plain forms count as the same. */
-    private val accent = "՛"
+    /** Accent marks dropped so accented and plain forms count as the same: Armenian emphasis (՛) and combining acute (Russian stress). */
+    private val accents = Regex("[՛́]")
 
     private fun normalize(s: String?): String? = s
-        ?.replace(accent, "")
+        ?.replace(accents, "")
         ?.replace(Regex("\\s+"), " ")            // collapse whitespace
         ?.replace(Regex("\\s*([\\p{P}])\\s*"), "$1") // drop spaces around punctuation
         ?.trim()
