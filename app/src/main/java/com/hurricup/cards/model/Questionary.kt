@@ -16,6 +16,7 @@ import java.io.InputStream
 
 private const val INTENT_KEY = "questionary"
 internal const val REVERSE_SUFFIX = "__reverse"
+internal const val MIXED_SUFFIX = "__mixed"
 
 open class Questionary(val title: String, val id: String = title) {
     protected open val _questions: MutableList<Question> = mutableListOf()
@@ -42,6 +43,19 @@ open class Questionary(val title: String, val id: String = title) {
 
         fun reverseOf(questionary: Questionary): Questionary =
             cache["${questionary.id}$REVERSE_SUFFIX"]!!
+
+        /** A composite of the questionary's own direct and reverse variants, cached on first use. */
+        fun mixedOf(questionary: Questionary): Questionary {
+            val mixedId = "${questionary.id}$MIXED_SUFFIX"
+            cache[mixedId]?.let { return it }
+            val mixed = ReferenceCompositeQuestionary(
+                questionary.title,
+                mixedId,
+                listOf(questionary.id, "${questionary.id}$REVERSE_SUFFIX"),
+                reverse = false,
+            )
+            return cache(mixed)!!
+        }
 
         /** Processes raw questions into direct + reverse questionaries (stamped with their ids) and caches both. */
         private fun cacheProcessed(title: String, id: String, rawQuestions: List<Question>): Questionary {

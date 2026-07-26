@@ -40,7 +40,8 @@ private const val RECENT_WINDOW_DAYS_KEY = "recent_window_days"
 class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
     private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
-    private var reverseModes = mutableStateOf<Map<String, Boolean>>(emptyMap())
+    private var mode = mutableStateOf(Mode.DIRECT)
+    private var modeOverrides = mutableStateOf<Map<String, Mode>>(emptyMap())
     private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
     private var mistakesCapPercent = mutableStateOf(DEFAULT_MISTAKES_CAP_PERCENT)
     private var mistakesCapOverrides = mutableStateOf<Map<String, Int>>(emptyMap())
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
         questionaries = Questionary.readAll(assets) { error ->
             Toast.makeText(this, error, Toast.LENGTH_LONG).show()
         } + Questionary.generateAll()
-        loadReverseModes()
+        loadModes()
         recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
         mistakesCapPercent.value = prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
         loadMistakesCapOverrides()
@@ -79,8 +80,9 @@ class MainActivity : ComponentActivity() {
                         this,
                         questionaries,
                         distributions.value,
-                        reverseModes.value,
-                        ::toggleReverseMode,
+                        mode.value,
+                        modeOverrides.value,
+                        ::setModeOverride,
                         mistakesCapPercent.value,
                         mistakesCapOverrides.value,
                         ::setMistakesCapOverride,
@@ -91,16 +93,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun loadReverseModes() {
-        reverseModes.value = questionaries.associate { q ->
-            q.id to prefs.getBoolean("reverse_${q.id}", false)
-        }
+    private fun loadModes() {
+        mode.value = prefs.getString(MODE_KEY, null)?.let { runCatching { Mode.valueOf(it) }.getOrNull() }
+            ?: Mode.DIRECT
+        modeOverrides.value = prefs.all.entries
+            .filter { it.key.startsWith(MODE_OVERRIDE_PREFIX) && it.value is String }
+            .mapNotNull { e ->
+                runCatching { Mode.valueOf(e.value as String) }.getOrNull()
+                    ?.let { e.key.removePrefix(MODE_OVERRIDE_PREFIX) to it }
+            }
+            .toMap()
     }
 
-    private fun toggleReverseMode(id: String) {
-        val newValue = !(reverseModes.value[id] ?: false)
-        prefs.edit { putBoolean("reverse_$id", newValue) }
-        reverseModes.value += (id to newValue)
+    private fun setMode(m: Mode) {
+        prefs.edit { putString(MODE_KEY, m.name) }
+        mode.value = m
+    }
+
+    /** [m] null clears the override (falls back to the global mode). */
+    private fun setModeOverride(id: String, m: Mode?) {
+        prefs.edit {
+            if (m == null) remove(MODE_OVERRIDE_PREFIX + id)
+            else putString(MODE_OVERRIDE_PREFIX + id, m.name)
+        }
+        modeOverrides.value =
+            if (m == null) modeOverrides.value - id
+            else modeOverrides.value + (id to m)
     }
 
     private fun setRecentWindowDays(days: Int) {
@@ -144,6 +162,7 @@ class MainActivity : ComponentActivity() {
         var windowSubmenu by remember { mutableStateOf(false) }
         var capSubmenu by remember { mutableStateOf(false) }
         var maxAgeSubmenu by remember { mutableStateOf(false) }
+        var modeSubmenu by remember { mutableStateOf(false) }
         TopAppBar(
             title = {},
             actions = {
@@ -157,7 +176,7 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                     DropdownMenu(
-                        expanded = expanded && !windowSubmenu && !capSubmenu && !maxAgeSubmenu,
+                        expanded = expanded && !windowSubmenu && !capSubmenu && !maxAgeSubmenu && !modeSubmenu,
                         onDismissRequest = { expanded = false }
                     ) {
                         DropdownMenuItem(
@@ -167,6 +186,10 @@ class MainActivity : ComponentActivity() {
                         DropdownMenuItem(
                             text = { Text("Import stats") },
                             onClick = { expanded = false; importLauncher.launch("application/zip") }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Mode: ${mode.value.label}") },
+                            onClick = { modeSubmenu = true }
                         )
                         DropdownMenuItem(
                             text = { Text("Recent window: ${days(recentWindowDays.value)}") },
@@ -180,6 +203,24 @@ class MainActivity : ComponentActivity() {
                             text = { Text("Max age: ${days(maxAgeDays.value)}") },
                             onClick = { maxAgeSubmenu = true }
                         )
+                    }
+                    DropdownMenu(
+                        expanded = modeSubmenu,
+                        onDismissRequest = { modeSubmenu = false; expanded = false }
+                    ) {
+                        for (m in Mode.entries) {
+                            DropdownMenuItem(
+                                text = { Text(m.label) },
+                                trailingIcon = if (m == mode.value) {
+                                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                                } else null,
+                                onClick = {
+                                    setMode(m)
+                                    modeSubmenu = false
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                     DropdownMenu(
                         expanded = windowSubmenu,
@@ -265,7 +306,7 @@ class MainActivity : ComponentActivity() {
         val since = System.currentTimeMillis() - recentWindowDays.value * DAY_MS
         val coordinator = StatsCoordinator(filesDir, maxAgeDays.value.toDouble())
         distributions.value = questionaries.flatMap { q ->
-            listOf(q, Questionary.reverseOf(q)).map {
+            listOf(q, Questionary.reverseOf(q), Questionary.mixedOf(q)).map {
                 it.id to coordinator.distribution(it, since)
             }
         }.toMap()
@@ -282,8 +323,9 @@ fun Questionaries(
     mainActivity: MainActivity,
     questionaries: List<Questionary>,
     distributions: Map<String, Distribution>,
-    reverseModes: Map<String, Boolean>,
-    onToggleReverse: (String) -> Unit,
+    globalMode: Mode,
+    modeOverrides: Map<String, Mode>,
+    onSetModeOverride: (String, Mode?) -> Unit,
     appMistakesCapPercent: Int,
     mistakesCapOverrides: Map<String, Int>,
     onSetMistakesCapOverride: (String, Int?) -> Unit,
@@ -298,8 +340,12 @@ fun Questionaries(
             .verticalScroll(rememberScrollState())
     ) {
         for (questionary in questionaries) {
-            val isReverse = reverseModes[questionary.id] == true
-            val active = if (isReverse) Questionary.reverseOf(questionary) else questionary
+            val effectiveMode = modeOverrides[questionary.id] ?: globalMode
+            val active = when (effectiveMode) {
+                Mode.DIRECT -> questionary
+                Mode.REVERSE -> Questionary.reverseOf(questionary)
+                Mode.MIXED -> Questionary.mixedOf(questionary)
+            }
             val dist = distributions[active.id]
             val isDone = dist?.doneRecently == true
             val half = DEFAULT_SESSION_SIZE / 2
@@ -322,9 +368,14 @@ fun Questionaries(
                 if (dist != null) {
                     PieChart(dist)
                 }
-                if (isReverse) {
+                val modeGlyph = when (effectiveMode) {
+                    Mode.DIRECT -> null
+                    Mode.REVERSE -> "←"
+                    Mode.MIXED -> "⇄"
+                }
+                if (modeGlyph != null) {
                     Text(
-                        text = "⇄",
+                        text = modeGlyph,
                         fontSize = 28.sp,
                         modifier = Modifier.offset(x = (-1).dp, y = (-3).dp)
                     )
@@ -342,8 +393,8 @@ fun Questionaries(
                 SessionMenu(
                     half = half,
                     double = double,
-                    isReverse = isReverse,
-                    onToggleReverse = { onToggleReverse(questionary.id) },
+                    overrideMode = modeOverrides[questionary.id],
+                    onSetModeOverride = { onSetModeOverride(questionary.id, it) },
                     appMistakesCapPercent = appMistakesCapPercent,
                     overrideMistakesCapPercent = mistakesCapOverrides[active.id],
                     onSetMistakesCapOverride = { onSetMistakesCapOverride(active.id, it) },
@@ -358,8 +409,8 @@ fun Questionaries(
 private fun SessionMenu(
     half: Int,
     double: Int,
-    isReverse: Boolean,
-    onToggleReverse: () -> Unit,
+    overrideMode: Mode?,
+    onSetModeOverride: (Mode?) -> Unit,
     appMistakesCapPercent: Int,
     overrideMistakesCapPercent: Int?,
     onSetMistakesCapOverride: (Int?) -> Unit,
@@ -367,12 +418,13 @@ private fun SessionMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var capSubmenu by remember { mutableStateOf(false) }
+    var modeSubmenu by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "Session options")
         }
         DropdownMenu(
-            expanded = expanded && !capSubmenu,
+            expanded = expanded && !capSubmenu && !modeSubmenu,
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
@@ -384,17 +436,35 @@ private fun SessionMenu(
                 onClick = { expanded = false; onSelect(double) }
             )
             DropdownMenuItem(
-                text = { Text("Reverse") },
-                trailingIcon = if (isReverse) {
-                    { Icon(Icons.Filled.Check, contentDescription = null) }
-                } else null,
-                onClick = { expanded = false; onToggleReverse() }
+                text = { Text("Mode: ${overrideMode?.label ?: "Global"}") },
+                onClick = { modeSubmenu = true }
             )
             val capLabel = overrideMistakesCapPercent?.let { "$it%" } ?: "default"
             DropdownMenuItem(
                 text = { Text("Hard questions: $capLabel") },
                 onClick = { capSubmenu = true }
             )
+        }
+        DropdownMenu(
+            expanded = modeSubmenu,
+            onDismissRequest = { modeSubmenu = false; expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Global") },
+                trailingIcon = if (overrideMode == null) {
+                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                } else null,
+                onClick = { onSetModeOverride(null); modeSubmenu = false; expanded = false }
+            )
+            for (m in Mode.entries) {
+                DropdownMenuItem(
+                    text = { Text(m.label) },
+                    trailingIcon = if (m == overrideMode) {
+                        { Icon(Icons.Filled.Check, contentDescription = null) }
+                    } else null,
+                    onClick = { onSetModeOverride(m); modeSubmenu = false; expanded = false }
+                )
+            }
         }
         DropdownMenu(
             expanded = capSubmenu,
