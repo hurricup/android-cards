@@ -1,5 +1,15 @@
 # Plans
 
+## Merge duplicate questions across composite leaves
+- Within a leaf, same-text questions are merged (answers joined). Across composite leaves they are NOT — the same question (e.g. կам) in two leaves shows as two cards in a composite session.
+- Constraint: stats must stay per leaf. So we can't merge-and-store at composite level, nor attribute a merged card to a single leaf.
+- Plan: merge for display + fan-out on record.
+  - Composite groups leaf questions by exact (text, answer); shows one card.
+  - On answer, record the attempt to every owning leaf (same right/wrong).
+  - Selection/classification of a merged card aggregates across owners: mistake if any owner > 0, new if all owners new, else known; lastAsked = most recent across owners.
+- Model change: a merged Question carries multiple owner ids (questionaryIds: List<String>); StatsCoordinator.record/score/lastAsked/hasAttempts operate over the set. Localized to the coordinator.
+- Open: key on exact (text, answer) (collapse true duplicates only, keep same-spelling-different-meaning separate) — leaning this way — vs. text-only (union answers).
+
 ## XML consistency tests
 - Add tests to check XML questionary files for consistency
 - Detect duplicate questions and answers within a questionary
