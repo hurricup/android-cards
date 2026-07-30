@@ -18,8 +18,8 @@ Flashcard learning app. Originally built for kids, now primarily used by the aut
 - **Question** (`model/Question.kt`) — `data class Question(text, answer? , questionaryId)`. Carries the id of its owning questionary so its stats are tracked independently of which questionary shows it.
 - **Questionary** (`model/Questionary.kt`) — base class. Handles XML parsing from assets, caching by id in companion object map, Intent-based serialization (id as key). Each source yields a direct and a reverse variant (`id__reverse`).
 - **ReferenceCompositeQuestionary** (`model/impl/ReferenceCompositeQuestionary.kt`) — aggregates questions from parts referenced by id, resolved lazily from the cache. Parts keep their own stats; missing refs are skipped and reference cycles are broken. Used for the math composites and for XML-declared composites.
-- **QuestionaryStats** (`model/QuestionaryStats.kt`) — per-question answer history for one questionary id, one JSON file, decay-weighted scoring.
-- **StatsCoordinator** (`model/StatsCoordinator.kt`) — routes each question to the store of its `questionaryId`; owns session composition (three-pile: mistakes/new/known) and distribution aggregation for pie charts.
+- **Scheduling (Leitner):** `model/TierScheduler.kt` + `TierStore.kt` + `Tiers.kt`. Each question has a tier + last-answered time stored in `tiers/<id>.json` (per questionary id). Correct → next tier, wrong → one tier back (floored at 1); tier 0 = unknown/new. Session = due cards (highest tier first, top tier capped) then new to fill. Interval per tier = `multiplier^(tier-1)` days, multiplier configurable in the settings gear. Pie chart shows per-tier distribution.
+- **Legacy stats** (`model/QuestionaryStats.kt`, `StatsCoordinator.kt`) — the old decay-weighted attempts log in `stats/<id>.json`. Kept only so the gear's "Import stat data (tiers)" can derive tiers from prior history; not used for live scheduling.
 
 ## Questionnaire Sources
 

@@ -45,11 +45,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import com.hurricup.cards.model.DEFAULT_MAX_AGE_DAYS
+import com.hurricup.cards.model.DEFAULT_INTERVAL_MULTIPLIER
 import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
 import com.hurricup.cards.model.Question
 import com.hurricup.cards.model.Questionary
-import com.hurricup.cards.model.StatsCoordinator
+import com.hurricup.cards.model.TierScheduler
 
 private const val SESSION_SIZE_KEY = "session_size"
 
@@ -61,21 +61,16 @@ class QuestionaryActivity() : ComponentActivity() {
     private val questionary: Questionary
         get() = Questionary.from(intent)
 
-    private val stats: StatsCoordinator by lazy {
-        val maxAgeDays = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-            .getInt(MAX_AGE_DAYS_KEY, DEFAULT_MAX_AGE_DAYS)
-        StatsCoordinator(filesDir, maxAgeDays.toDouble())
+    private val stats: TierScheduler by lazy {
+        val multiplier = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .getFloat(MULTIPLIER_KEY, DEFAULT_INTERVAL_MULTIPLIER.toFloat())
+        TierScheduler(filesDir, multiplier.toDouble())
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val requestedSize = intent.getIntExtra(SESSION_SIZE_KEY, DEFAULT_SESSION_SIZE)
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val overrideKey = MISTAKES_CAP_OVERRIDE_PREFIX + questionary.id
-        val mistakesPercent =
-            if (prefs.contains(overrideKey)) prefs.getInt(overrideKey, DEFAULT_MISTAKES_CAP_PERCENT)
-            else prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
-        val session = stats.selectSession(questionary, requestedSize, mistakesPercent / 100.0)
+        val session = stats.selectSession(questionary, requestedSize)
         val sessionSize = session.size
         setContent {
             ExitConfirmation()

@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,19 +34,12 @@ import com.hurricup.cards.ui.theme.AndroidCardsTheme
 import kotlin.math.roundToInt
 import java.io.File
 
-private const val DAY_MS = 24L * 60 * 60 * 1000
-private const val DEFAULT_RECENT_WINDOW_DAYS = 3
-private const val RECENT_WINDOW_DAYS_KEY = "recent_window_days"
-
 class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
-    private var distributions = mutableStateOf<Map<String, Distribution>>(emptyMap())
+    private var distributions = mutableStateOf<Map<String, TierDistribution>>(emptyMap())
     private var mode = mutableStateOf(Mode.DIRECT)
     private var modeOverrides = mutableStateOf<Map<String, Mode>>(emptyMap())
-    private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
-    private var mistakesCapPercent = mutableStateOf(DEFAULT_MISTAKES_CAP_PERCENT)
-    private var mistakesCapOverrides = mutableStateOf<Map<String, Int>>(emptyMap())
-    private var maxAgeDays = mutableStateOf(DEFAULT_MAX_AGE_DAYS)
+    private var multiplier = mutableStateOf(DEFAULT_INTERVAL_MULTIPLIER.toFloat())
 
     private val prefs: SharedPreferences by lazy {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -65,10 +59,7 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, error, Toast.LENGTH_LONG).show()
         } + Questionary.generateAll()
         loadModes()
-        recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
-        mistakesCapPercent.value = prefs.getInt(MISTAKES_CAP_PERCENT_KEY, DEFAULT_MISTAKES_CAP_PERCENT)
-        loadMistakesCapOverrides()
-        maxAgeDays.value = prefs.getInt(MAX_AGE_DAYS_KEY, DEFAULT_MAX_AGE_DAYS)
+        multiplier.value = prefs.getFloat(MULTIPLIER_KEY, DEFAULT_INTERVAL_MULTIPLIER.toFloat())
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -83,9 +74,6 @@ class MainActivity : ComponentActivity() {
                         mode.value,
                         modeOverrides.value,
                         ::setModeOverride,
-                        mistakesCapPercent.value,
-                        mistakesCapOverrides.value,
-                        ::setMistakesCapOverride,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -121,48 +109,28 @@ class MainActivity : ComponentActivity() {
             else modeOverrides.value + (id to m)
     }
 
-    private fun setRecentWindowDays(days: Int) {
-        prefs.edit { putInt(RECENT_WINDOW_DAYS_KEY, days) }
-        recentWindowDays.value = days
+    private fun setMultiplier(value: Float) {
+        prefs.edit { putFloat(MULTIPLIER_KEY, value) }
+        multiplier.value = value
         refreshDistributions()
     }
 
-    private fun setMistakesCapPercent(percent: Int) {
-        prefs.edit { putInt(MISTAKES_CAP_PERCENT_KEY, percent) }
-        mistakesCapPercent.value = percent
-    }
-
-    private fun setMaxAgeDays(days: Int) {
-        prefs.edit { putInt(MAX_AGE_DAYS_KEY, days) }
-        maxAgeDays.value = days
-        refreshDistributions()
-    }
-
-    private fun loadMistakesCapOverrides() {
-        mistakesCapOverrides.value = prefs.all.entries
-            .filter { it.key.startsWith(MISTAKES_CAP_OVERRIDE_PREFIX) && it.value is Int }
-            .associate { it.key.removePrefix(MISTAKES_CAP_OVERRIDE_PREFIX) to it.value as Int }
-    }
-
-    /** [percent] null clears the override (falls back to the app-level setting). */
-    private fun setMistakesCapOverride(id: String, percent: Int?) {
-        prefs.edit {
-            if (percent == null) remove(MISTAKES_CAP_OVERRIDE_PREFIX + id)
-            else putInt(MISTAKES_CAP_OVERRIDE_PREFIX + id, percent)
+    private fun importStatData() {
+        try {
+            val count = TierScheduler(filesDir, multiplier.value.toDouble()).importFromStats()
+            Toast.makeText(this, "Imported tiers from $count files", Toast.LENGTH_SHORT).show()
+            refreshDistributions()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
         }
-        mistakesCapOverrides.value =
-            if (percent == null) mistakesCapOverrides.value - id
-            else mistakesCapOverrides.value + (id to percent)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun SettingsBar() {
         var expanded by remember { mutableStateOf(false) }
-        var windowSubmenu by remember { mutableStateOf(false) }
-        var capSubmenu by remember { mutableStateOf(false) }
-        var maxAgeSubmenu by remember { mutableStateOf(false) }
         var modeSubmenu by remember { mutableStateOf(false) }
+        var multiplierSubmenu by remember { mutableStateOf(false) }
         TopAppBar(
             title = {},
             actions = {
@@ -176,7 +144,7 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                     DropdownMenu(
-                        expanded = expanded && !windowSubmenu && !capSubmenu && !maxAgeSubmenu && !modeSubmenu,
+                        expanded = expanded && !modeSubmenu && !multiplierSubmenu,
                         onDismissRequest = { expanded = false }
                     ) {
                         DropdownMenuItem(
@@ -188,20 +156,16 @@ class MainActivity : ComponentActivity() {
                             onClick = { expanded = false; importLauncher.launch("application/zip") }
                         )
                         DropdownMenuItem(
+                            text = { Text("Import stat data (tiers)") },
+                            onClick = { expanded = false; importStatData() }
+                        )
+                        DropdownMenuItem(
                             text = { Text("Mode: ${mode.value.label}") },
                             onClick = { modeSubmenu = true }
                         )
                         DropdownMenuItem(
-                            text = { Text("Recent window: ${days(recentWindowDays.value)}") },
-                            onClick = { windowSubmenu = true }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Hard questions: ${mistakesCapPercent.value}%") },
-                            onClick = { capSubmenu = true }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Max age: ${days(maxAgeDays.value)}") },
-                            onClick = { maxAgeSubmenu = true }
+                            text = { Text("Interval: ×${"%.1f".format(multiplier.value)}") },
+                            onClick = { multiplierSubmenu = true }
                         )
                     }
                     DropdownMenu(
@@ -223,48 +187,16 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     DropdownMenu(
-                        expanded = windowSubmenu,
-                        onDismissRequest = { windowSubmenu = false; expanded = false }
-                    ) {
-                        for (d in 1..7) {
-                            DropdownMenuItem(
-                                text = { Text(days(d)) },
-                                trailingIcon = if (d == recentWindowDays.value) {
-                                    { Icon(Icons.Filled.Check, contentDescription = null) }
-                                } else null,
-                                onClick = {
-                                    setRecentWindowDays(d)
-                                    windowSubmenu = false
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = capSubmenu,
-                        onDismissRequest = { capSubmenu = false; expanded = false }
+                        expanded = multiplierSubmenu,
+                        onDismissRequest = { multiplierSubmenu = false; expanded = false }
                     ) {
                         Column(modifier = Modifier.width(260.dp).padding(horizontal = 16.dp)) {
-                            Text("Hard questions: ${mistakesCapPercent.value}%")
+                            Text("Interval multiplier: ×${"%.1f".format(multiplier.value)}")
                             Slider(
-                                value = mistakesCapPercent.value.toFloat(),
-                                onValueChange = { mistakesCapPercent.value = it.roundToInt() },
-                                onValueChangeFinished = { setMistakesCapPercent(mistakesCapPercent.value) },
-                                valueRange = 0f..100f
-                            )
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = maxAgeSubmenu,
-                        onDismissRequest = { maxAgeSubmenu = false; expanded = false }
-                    ) {
-                        Column(modifier = Modifier.width(260.dp).padding(horizontal = 16.dp)) {
-                            Text("Max age: ${days(maxAgeDays.value)}")
-                            Slider(
-                                value = maxAgeDays.value.toFloat(),
-                                onValueChange = { maxAgeDays.value = it.roundToInt() },
-                                onValueChangeFinished = { setMaxAgeDays(maxAgeDays.value) },
-                                valueRange = 1f..90f
+                                value = multiplier.value,
+                                onValueChange = { multiplier.value = (it * 10).roundToInt() / 10f },
+                                onValueChangeFinished = { setMultiplier(multiplier.value) },
+                                valueRange = 1.2f..5f
                             )
                         }
                     }
@@ -303,11 +235,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshDistributions() {
-        val since = System.currentTimeMillis() - recentWindowDays.value * DAY_MS
-        val coordinator = StatsCoordinator(filesDir, maxAgeDays.value.toDouble())
+        val scheduler = TierScheduler(filesDir, multiplier.value.toDouble())
         distributions.value = questionaries.flatMap { q ->
             listOf(q, Questionary.reverseOf(q), Questionary.mixedOf(q)).map {
-                it.id to coordinator.distribution(it, since)
+                it.id to scheduler.distribution(it)
             }
         }.toMap()
     }
@@ -322,13 +253,10 @@ class MainActivity : ComponentActivity() {
 fun Questionaries(
     mainActivity: MainActivity,
     questionaries: List<Questionary>,
-    distributions: Map<String, Distribution>,
+    distributions: Map<String, TierDistribution>,
     globalMode: Mode,
     modeOverrides: Map<String, Mode>,
     onSetModeOverride: (String, Mode?) -> Unit,
-    appMistakesCapPercent: Int,
-    mistakesCapOverrides: Map<String, Int>,
-    onSetMistakesCapOverride: (String, Int?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -347,7 +275,8 @@ fun Questionaries(
                 Mode.MIXED -> Questionary.mixedOf(questionary)
             }
             val dist = distributions[active.id]
-            val isDone = dist?.doneRecently == true
+            // full color when there's something to practice (due reviews or new), dimmed when caught up
+            val hasWork = dist != null && (dist.due > 0 || dist.new > 0)
             val half = DEFAULT_SESSION_SIZE / 2
             val double = DEFAULT_SESSION_SIZE * 2
             fun launch(sessionSize: Int) {
@@ -386,7 +315,7 @@ fun Questionaries(
                     fontSize = 28.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (isDone) Color.Unspecified
+                    color = if (hasWork) Color.Unspecified
                     else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                     modifier = Modifier.weight(1f)
                 )
@@ -396,9 +325,6 @@ fun Questionaries(
                     globalMode = globalMode,
                     overrideMode = modeOverrides[questionary.id],
                     onSetModeOverride = { onSetModeOverride(questionary.id, it) },
-                    appMistakesCapPercent = appMistakesCapPercent,
-                    overrideMistakesCapPercent = mistakesCapOverrides[active.id],
-                    onSetMistakesCapOverride = { onSetMistakesCapOverride(active.id, it) },
                     onSelect = { launch(it) },
                 )
             }
@@ -413,20 +339,16 @@ private fun SessionMenu(
     globalMode: Mode,
     overrideMode: Mode?,
     onSetModeOverride: (Mode?) -> Unit,
-    appMistakesCapPercent: Int,
-    overrideMistakesCapPercent: Int?,
-    onSetMistakesCapOverride: (Int?) -> Unit,
     onSelect: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var capSubmenu by remember { mutableStateOf(false) }
     var modeSubmenu by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "Session options")
         }
         DropdownMenu(
-            expanded = expanded && !capSubmenu && !modeSubmenu,
+            expanded = expanded && !modeSubmenu,
             onDismissRequest = { expanded = false }
         ) {
             DropdownMenuItem(
@@ -440,11 +362,6 @@ private fun SessionMenu(
             DropdownMenuItem(
                 text = { Text("Mode: ${overrideMode?.label ?: "${globalMode.label} (global)"}") },
                 onClick = { modeSubmenu = true }
-            )
-            val capLabel = overrideMistakesCapPercent?.let { "$it%" } ?: "default"
-            DropdownMenuItem(
-                text = { Text("Hard questions: $capLabel") },
-                onClick = { capSubmenu = true }
             )
         }
         DropdownMenu(
@@ -468,49 +385,19 @@ private fun SessionMenu(
                 )
             }
         }
-        DropdownMenu(
-            expanded = capSubmenu,
-            onDismissRequest = { capSubmenu = false; expanded = false }
-        ) {
-            Column(modifier = Modifier.width(280.dp).padding(horizontal = 16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = overrideMistakesCapPercent != null,
-                        onCheckedChange = { checked ->
-                            onSetMistakesCapOverride(if (checked) appMistakesCapPercent else null)
-                        }
-                    )
-                    Text("Override app default")
-                }
-                Text(
-                    overrideMistakesCapPercent?.let { "Hard questions: $it%" }
-                        ?: "Hard questions: default ($appMistakesCapPercent%)"
-                )
-                Slider(
-                    value = (overrideMistakesCapPercent ?: appMistakesCapPercent).toFloat(),
-                    onValueChange = { onSetMistakesCapOverride(it.roundToInt()) },
-                    valueRange = 0f..100f,
-                    enabled = overrideMistakesCapPercent != null,
-                )
-            }
-        }
     }
 }
 
-private val pieRed = Color(0xFFBB6666)
-private val pieGreen = Color(0xFF66BB66)
 private val pieGray = Color(0xFFD5D5D5)
+private val tierLow = Color(0xFFBB6666)
+private val tierHigh = Color(0xFF66BB66)
 
-private fun days(count: Int): String = "$count ${if (count == 1) "day" else "days"}"
-
-private fun formatAge(millis: Long): String {
-    val hours = (millis / (1000 * 60 * 60)).toInt()
-    if (hours < 24) return "$hours ${if (hours == 1) "hour" else "hours"}"
-    return days(hours / 24)
-}
+/** Color for a tier: red (tier 1) → green (max tier). */
+private fun tierColor(tier: Int): Color =
+    lerp(tierLow, tierHigh, ((tier - 1).toFloat() / (MAX_TIER - 1)).coerceIn(0f, 1f))
 
 @Composable
-private fun PieChart(dist: Distribution) {
+private fun PieChart(dist: TierDistribution) {
     var showTooltip by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.padding(end = 8.dp)) {
@@ -529,9 +416,10 @@ private fun PieChart(dist: Distribution) {
                     startAngle += sweep
                 }
             }
-            drawSlice(dist.mistakes, pieRed)
-            drawSlice(dist.known, pieGreen)
             drawSlice(dist.new, pieGray)
+            for (tier in dist.perTier.keys.sorted()) {
+                drawSlice(dist.perTier.getValue(tier), tierColor(tier))
+            }
         }
 
         if (showTooltip) {
@@ -547,12 +435,15 @@ private fun PieChart(dist: Distribution) {
                     )
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Mistakes: ${dist.mistakes}", color = pieRed, fontSize = 14.sp)
-                        Text("Known: ${dist.known}", color = pieGreen, fontSize = 14.sp)
                         Text("New: ${dist.new}", color = pieGray, fontSize = 14.sp)
-                        dist.oldestAnsweredAt?.let {
-                            Text("Oldest: ${formatAge(System.currentTimeMillis() - it)}", fontSize = 14.sp)
+                        for (tier in dist.perTier.keys.sorted()) {
+                            Text(
+                                "Tier $tier: ${dist.perTier.getValue(tier)}",
+                                color = tierColor(tier),
+                                fontSize = 14.sp,
+                            )
                         }
+                        Text("Due: ${dist.due}", fontSize = 14.sp)
                     }
                 }
             }
