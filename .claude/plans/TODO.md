@@ -1,5 +1,11 @@
 # Plans
 
+## Per-question tier-change history (toward per-word scheduling)
+- Currently only the current tier + last-answered are stored; transition history is discarded.
+- Log each answer per question: timestamp, from-tier → to-tier, correct/wrong.
+- Enables adapting the schedule per word later (à la FSRS: learn per-card difficulty/stability from the review log) instead of one global multiplier.
+- Store alongside tier state (append-only log per questionary id); keep it cheap.
+
 ## Leitner tiered scheduler (major refactor — next big direction)
 Replace the decay-weighted score + three-pile selection with a Leitner box system
 (spaced repetition with increasing intervals). Research-backed; current algorithm is a rough proxy.
