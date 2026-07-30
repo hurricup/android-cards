@@ -70,6 +70,7 @@ class TierScheduler(
         val now = System.currentTimeMillis()
         var new = 0
         var due = 0
+        var lastTrained: Long? = null
         val perTier = HashMap<Int, Int>()
         for (q in questionary.questions) {
             val state = storeOf(q).state(q.text)
@@ -78,9 +79,10 @@ class TierScheduler(
             } else {
                 perTier[state.tier] = (perTier[state.tier] ?: 0) + 1
                 if (isDue(state, now, multiplier)) due++
+                if (lastTrained == null || state.lastAnswered > lastTrained) lastTrained = state.lastAnswered
             }
         }
-        return TierDistribution(new, perTier, due)
+        return TierDistribution(new, perTier, due, lastTrained)
     }
 
     /**
@@ -113,6 +115,7 @@ data class TierDistribution(
     val new: Int,
     val perTier: Map<Int, Int>,
     val due: Int,
+    val lastTrained: Long? = null,
 ) {
     val total: Int get() = new + perTier.values.sum()
     val learning: Int get() = perTier.values.sum()

@@ -34,12 +34,17 @@ import com.hurricup.cards.ui.theme.AndroidCardsTheme
 import kotlin.math.roundToInt
 import java.io.File
 
+private const val DAY_MS = 24L * 60 * 60 * 1000
+private const val DEFAULT_RECENT_WINDOW_DAYS = 3
+private const val RECENT_WINDOW_DAYS_KEY = "recent_window_days"
+
 class MainActivity : ComponentActivity() {
     private lateinit var questionaries: List<Questionary>
     private var distributions = mutableStateOf<Map<String, TierDistribution>>(emptyMap())
     private var mode = mutableStateOf(Mode.DIRECT)
     private var modeOverrides = mutableStateOf<Map<String, Mode>>(emptyMap())
     private var multiplier = mutableStateOf(DEFAULT_INTERVAL_MULTIPLIER.toFloat())
+    private var recentWindowDays = mutableStateOf(DEFAULT_RECENT_WINDOW_DAYS)
 
     private val prefs: SharedPreferences by lazy {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
@@ -60,6 +65,7 @@ class MainActivity : ComponentActivity() {
         } + Questionary.generateAll()
         loadModes()
         multiplier.value = prefs.getFloat(MULTIPLIER_KEY, DEFAULT_INTERVAL_MULTIPLIER.toFloat())
+        recentWindowDays.value = prefs.getInt(RECENT_WINDOW_DAYS_KEY, DEFAULT_RECENT_WINDOW_DAYS)
         enableEdgeToEdge()
         setContent {
             AndroidCardsTheme {
@@ -74,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         mode.value,
                         modeOverrides.value,
                         ::setModeOverride,
+                        recentWindowDays.value,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }
@@ -115,6 +122,11 @@ class MainActivity : ComponentActivity() {
         refreshDistributions()
     }
 
+    private fun setRecentWindowDays(days: Int) {
+        prefs.edit { putInt(RECENT_WINDOW_DAYS_KEY, days) }
+        recentWindowDays.value = days
+    }
+
     private fun importStatData() {
         try {
             val count = TierScheduler(filesDir, multiplier.value.toDouble()).importFromStats()
@@ -131,6 +143,7 @@ class MainActivity : ComponentActivity() {
         var expanded by remember { mutableStateOf(false) }
         var modeSubmenu by remember { mutableStateOf(false) }
         var multiplierSubmenu by remember { mutableStateOf(false) }
+        var windowSubmenu by remember { mutableStateOf(false) }
         TopAppBar(
             title = {},
             actions = {
@@ -144,7 +157,7 @@ class MainActivity : ComponentActivity() {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
                     DropdownMenu(
-                        expanded = expanded && !modeSubmenu && !multiplierSubmenu,
+                        expanded = expanded && !modeSubmenu && !multiplierSubmenu && !windowSubmenu,
                         onDismissRequest = { expanded = false }
                     ) {
                         DropdownMenuItem(
@@ -167,6 +180,28 @@ class MainActivity : ComponentActivity() {
                             text = { Text("Interval: ×${"%.1f".format(multiplier.value)}") },
                             onClick = { multiplierSubmenu = true }
                         )
+                        DropdownMenuItem(
+                            text = { Text("Recent window: ${days(recentWindowDays.value)}") },
+                            onClick = { windowSubmenu = true }
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = windowSubmenu,
+                        onDismissRequest = { windowSubmenu = false; expanded = false }
+                    ) {
+                        for (d in 1..7) {
+                            DropdownMenuItem(
+                                text = { Text(days(d)) },
+                                trailingIcon = if (d == recentWindowDays.value) {
+                                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                                } else null,
+                                onClick = {
+                                    setRecentWindowDays(d)
+                                    windowSubmenu = false
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                     DropdownMenu(
                         expanded = modeSubmenu,
@@ -257,6 +292,7 @@ fun Questionaries(
     globalMode: Mode,
     modeOverrides: Map<String, Mode>,
     onSetModeOverride: (String, Mode?) -> Unit,
+    recentWindowDays: Int,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -275,8 +311,10 @@ fun Questionaries(
                 Mode.MIXED -> Questionary.mixedOf(questionary)
             }
             val dist = distributions[active.id]
-            // full color when there's something to practice (due reviews or new), dimmed when caught up
-            val hasWork = dist != null && (dist.due > 0 || dist.new > 0)
+            // dim the title when this questionary hasn't been trained within the recent window
+            val trainedRecently = dist?.lastTrained?.let {
+                System.currentTimeMillis() - it <= recentWindowDays * DAY_MS
+            } == true
             val half = DEFAULT_SESSION_SIZE / 2
             val double = DEFAULT_SESSION_SIZE * 2
             fun launch(sessionSize: Int) {
@@ -315,7 +353,7 @@ fun Questionaries(
                     fontSize = 28.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = if (hasWork) Color.Unspecified
+                    color = if (trainedRecently) Color.Unspecified
                     else MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
                     modifier = Modifier.weight(1f)
                 )
@@ -444,9 +482,23 @@ private fun PieChart(dist: TierDistribution) {
                             )
                         }
                         Text("Due: ${dist.due}", fontSize = 14.sp)
+                        dist.lastTrained?.let {
+                            Text(
+                                "Last trained: ${formatAge(System.currentTimeMillis() - it)} ago",
+                                fontSize = 14.sp,
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+private fun days(count: Int): String = "$count ${if (count == 1) "day" else "days"}"
+
+private fun formatAge(millis: Long): String {
+    val hours = (millis / (1000 * 60 * 60)).toInt()
+    if (hours < 24) return "$hours ${if (hours == 1) "hour" else "hours"}"
+    return days(hours / 24)
 }
