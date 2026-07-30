@@ -427,12 +427,15 @@ private fun SessionMenu(
 }
 
 private val pieGray = Color(0xFFD5D5D5)
-private val tierLow = Color(0xFFBB6666)
-private val tierHigh = Color(0xFF66BB66)
+private val pieRed = Color(0xFFBB6666)
+private val pieGreen = Color(0xFF66BB66)
+private val greenLight = Color(0xFF9CCC9C)
+private val greenDark = Color(0xFF2E7D32)
 
-/** Color for a tier: red (tier 1) → green (max tier). */
+/** Tier 1 is red; tiers 2+ are shades of green from light (tier 2) to dark (max tier). */
 private fun tierColor(tier: Int): Color =
-    lerp(tierLow, tierHigh, ((tier - 1).toFloat() / (MAX_TIER - 1)).coerceIn(0f, 1f))
+    if (tier <= 1) pieRed
+    else lerp(greenLight, greenDark, ((tier - 2).toFloat() / (MAX_TIER - 2)).coerceIn(0f, 1f))
 
 @Composable
 private fun PieChart(dist: TierDistribution) {
@@ -455,9 +458,8 @@ private fun PieChart(dist: TierDistribution) {
                 }
             }
             drawSlice(dist.new, pieGray)
-            for (tier in dist.perTier.keys.sorted()) {
-                drawSlice(dist.perTier.getValue(tier), tierColor(tier))
-            }
+            drawSlice(dist.perTier[1] ?: 0, pieRed)
+            drawSlice(dist.perTier.filterKeys { it >= 2 }.values.sum(), pieGreen)
         }
 
         if (showTooltip) {
