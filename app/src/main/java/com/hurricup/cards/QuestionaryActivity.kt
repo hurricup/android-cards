@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.hurricup.cards.model.DEFAULT_INTERVAL_MULTIPLIER
 import com.hurricup.cards.model.DEFAULT_SESSION_SIZE
 import com.hurricup.cards.model.Question
@@ -106,6 +107,13 @@ class QuestionaryActivity() : ComponentActivity() {
                 ProgressBar(stats)
 
                 val currentQuestion = questionary[indexes[0]]
+                val tier = this@QuestionaryActivity.stats.tierOf(currentQuestion)
+                Text(
+                    text = if (tier == 0) "new" else "tier $tier",
+                    fontSize = 14.sp,
+                    color = darkGray,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,

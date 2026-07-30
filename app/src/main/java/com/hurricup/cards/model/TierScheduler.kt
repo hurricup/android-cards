@@ -33,6 +33,9 @@ class TierScheduler(
     fun record(question: Question, correct: Boolean) =
         storeOf(question).record(question.text, correct, System.currentTimeMillis())
 
+    /** Current tier of a question (0 = new/unknown). */
+    fun tierOf(question: Question): Int = storeOf(question).state(question.text)?.tier ?: 0
+
     /** Indices into [Questionary.questions] for the next session. */
     fun selectSession(questionary: Questionary, sessionSize: Int): List<Int> {
         val now = System.currentTimeMillis()
