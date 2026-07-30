@@ -5,8 +5,10 @@ Replace the decay-weighted score + three-pile selection with a Leitner box syste
 (spaced repetition with increasing intervals). Research-backed; current algorithm is a rough proxy.
 
 **Model**
-- Per-card state = `(tier, lastAnswered)`, stored explicitly per (leaf questionary id, question text). Keep the attempts log too for now (history/export).
-- Tier 0 = unknown (never answered). Tiers ≥ 1 have increasing day intervals: 1, 2, 4, 8, … up to a max (~256 days; exact tier sizes TBD from research).
+- Per-card state = `(tier, lastAnswered, lastResult)`, stored explicitly per (leaf questionary id, question text). `lastResult` isn't needed for scheduling — kept for the pie / display / analytics. Keep the attempts log too for now (history/export).
+- Tier 0 = unknown (never answered). Tiers ≥ 1 grow by a **configurable global multiplier**: `interval(tier) = round(baseDay × multiplier^(tier−1))`, base = 1 day, up to a max (~256 days / a max tier; exact numbers TBD from research).
+  - Multiplier is a global setting, useful range ~1.2–5 (φ≈1.618 ≈ Fibonacci 1,2,3,5,8,13,…; 2 = doubling; 2.5 ≈ SM-2). **1 disables spacing** (all tiers = 1 day) — floor the setting above 1.
+  - Because we store the **tier**, not the absolute interval, changing the multiplier recomputes every due date on the fly from `(tier, lastAnswered)` — no migration/rescale needed.
 - On answer: correct → tier + 1 (capped at max); wrong → `max(1, tier − 1)`. A card leaves tier 0 on first answer and never returns; a wrong answer in tier 1 stays in tier 1.
 - Due when `now − lastAnswered ≥ interval(tier)`.
 
@@ -17,7 +19,7 @@ Replace the decay-weighted score + three-pile selection with a Leitner box syste
 
 **Settings / UI**
 - Drops the old decay knobs: halflife, max-age, mistakes-cap %, known-pool-factor.
-- New knobs: tier intervals, top-tier take limit (session size already exists).
+- New knobs: global interval multiplier (~1.2–5), max tier, top-tier take limit (session size already exists).
 - Pie chart buckets become tier 0 / tier 1 / tier 2+.
 
 **Compatibility**
