@@ -1,12 +1,14 @@
 package com.hurricup.cards.model
 
+import org.json.JSONObject
 import java.io.File
 
 /** Max cards taken from the single highest due tier, so sessions don't become all top-tier. */
 const val TOP_TIER_TAKE_LIMIT = 20
 
-private const val TIERS_DIR = "tiers"
-private const val STATS_DIR = "stats"
+internal const val STATS_DIR = "stats"
+internal const val TIERS_DIR = "tiers"
+internal const val TIER_LOG_DIR = "tier_log"
 
 /**
  * Leitner spaced-repetition scheduler. Routes each question to the tier store of its owning
@@ -30,8 +32,29 @@ class TierScheduler(
 
     private fun storeOf(question: Question) = storeFor(question.questionaryId)
 
-    fun record(question: Question, correct: Boolean) =
-        storeOf(question).record(question.text, correct, System.currentTimeMillis())
+    fun record(question: Question, correct: Boolean) {
+        val now = System.currentTimeMillis()
+        val store = storeOf(question)
+        val from = store.state(question.text)?.tier ?: 0
+        store.record(question.text, correct, now)
+        val to = store.state(question.text)?.tier ?: from
+        appendTransition(question.questionaryId, question.text, from, to, now)
+    }
+
+    /** Appends the tier transition to an append-only JSONL log for later per-word analysis. */
+    private fun appendTransition(leafId: String, question: String, from: Int, to: Int, at: Long) {
+        val file = File(filesDir, "$TIER_LOG_DIR/${logFileName(leafId)}")
+        file.parentFile?.mkdirs()
+        val line = JSONObject()
+            .put("leaf", leafId)
+            .put("question", question)
+            .put("from", from)
+            .put("to", to)
+            .put("at", at)
+        file.appendText("$line\n")
+    }
+
+    private fun logFileName(id: String) = id.replace(Regex("[^\\w]"), "_") + ".jsonl"
 
     /** Current tier of a question (0 = new/unknown). */
     fun tierOf(question: Question): Int = storeOf(question).state(question.text)?.tier ?: 0

@@ -242,13 +242,13 @@ class MainActivity : ComponentActivity() {
 
     private fun exportStats(uri: Uri) {
         try {
-            val statsDir = File(filesDir, "stats")
-            if (!statsDir.exists() || statsDir.listFiles().isNullOrEmpty()) {
-                Toast.makeText(this, "No stats to export", Toast.LENGTH_SHORT).show()
+            val dirs = listOf(STATS_DIR, TIERS_DIR, TIER_LOG_DIR)
+            if (dirs.none { File(filesDir, it).listFiles()?.isNotEmpty() == true }) {
+                Toast.makeText(this, "Nothing to export", Toast.LENGTH_SHORT).show()
                 return
             }
             contentResolver.openOutputStream(uri)?.use { output ->
-                StatsBackup.zip(statsDir, output)
+                StatsBackup.zip(filesDir, dirs, output)
             }
             Toast.makeText(this, "Stats exported", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -258,9 +258,8 @@ class MainActivity : ComponentActivity() {
 
     private fun importStats(uri: Uri) {
         try {
-            val statsDir = File(filesDir, "stats")
             contentResolver.openInputStream(uri)?.use { input ->
-                StatsBackup.unzip(input, statsDir)
+                StatsBackup.unzip(input, filesDir)
             }
             Toast.makeText(this, "Stats imported", Toast.LENGTH_SHORT).show()
             refreshDistributions()

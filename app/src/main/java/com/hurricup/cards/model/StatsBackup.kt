@@ -8,23 +8,29 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 object StatsBackup {
-    fun zip(statsDir: File, output: OutputStream) {
+    /** Zips the given subdirectories of [filesDir], preserving their relative paths in the archive. */
+    fun zip(filesDir: File, dirs: List<String>, output: OutputStream) {
         ZipOutputStream(output).use { zos ->
-            statsDir.listFiles()?.forEach { file ->
-                zos.putNextEntry(ZipEntry(file.name))
-                file.inputStream().use { it.copyTo(zos) }
-                zos.closeEntry()
+            for (dir in dirs) {
+                File(filesDir, dir).listFiles()?.forEach { file ->
+                    zos.putNextEntry(ZipEntry("$dir/${file.name}"))
+                    file.inputStream().use { it.copyTo(zos) }
+                    zos.closeEntry()
+                }
             }
         }
     }
 
-    fun unzip(input: InputStream, statsDir: File) {
-        statsDir.mkdirs()
+    /** Restores an archive (entries carry their relative paths) under [filesDir]. */
+    fun unzip(input: InputStream, filesDir: File) {
         ZipInputStream(input).use { zis ->
             var entry = zis.nextEntry
             while (entry != null) {
-                val file = File(statsDir, entry.name)
-                file.outputStream().use { zis.copyTo(it) }
+                if (!entry.isDirectory) {
+                    val file = File(filesDir, entry.name)
+                    file.parentFile?.mkdirs()
+                    file.outputStream().use { zis.copyTo(it) }
+                }
                 zis.closeEntry()
                 entry = zis.nextEntry
             }
