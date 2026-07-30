@@ -1,5 +1,34 @@
 # Plans
 
+## Leitner tiered scheduler (major refactor — next big direction)
+Replace the decay-weighted score + three-pile selection with a Leitner box system
+(spaced repetition with increasing intervals). Research-backed; current algorithm is a rough proxy.
+
+**Model**
+- Per-card state = `(tier, lastAnswered)`, stored explicitly per (leaf questionary id, question text). Keep the attempts log too for now (history/export).
+- Tier 0 = unknown (never answered). Tiers ≥ 1 have increasing day intervals: 1, 2, 4, 8, … up to a max (~256 days; exact tier sizes TBD from research).
+- On answer: correct → tier + 1 (capped at max); wrong → `max(1, tier − 1)`. A card leaves tier 0 on first answer and never returns; a wrong answer in tier 1 stays in tier 1.
+- Due when `now − lastAnswered ≥ interval(tier)`.
+
+**Session composition**
+- Fill to session size: due cards **highest tier first** down to tier 1, then new (tier 0) to fill the rest.
+- **No new cap** — pull extra new to fill the session; it self-throttles because due cards take priority (heavy review days leave no slack for new). Balance point tracks accuracy; early lumpiness smooths out.
+- **Top-tier take limit** (and maybe per-tier limits): cap how many cards come from the top tier so sessions don't become all top-tier and starve lower tiers/new. Exact caps TBD with the interval numbers.
+
+**Settings / UI**
+- Drops the old decay knobs: halflife, max-age, mistakes-cap %, known-pool-factor.
+- New knobs: tier intervals, top-tier take limit (session size already exists).
+- Pie chart buckets become tier 0 / tier 1 / tier 2+.
+
+**Compatibility**
+- Keying stays per leaf id, so composites (aggregate) and modes (direct/reverse/mixed, operate on leaf/variant ids) are unaffected.
+- Migration: derive initial tier from the existing attempts log (nice-to-have, not critical); otherwise start everyone at tier 0.
+
+**Phases**
+1. Scheduler core: tiers, due calc, promote/demote, session fill with top-tier limit.
+2. Settings + pie (tier 0/1/2+); remove obsolete decay settings.
+3. Migration from the attempts log.
+
 ## Merge duplicate questions across composite leaves
 - Within a leaf, same-text questions are merged (answers joined). Across composite leaves they are NOT — the same question (e.g. կам) in two leaves shows as two cards in a composite session.
 - Constraint: stats must stay per leaf. So we can't merge-and-store at composite level, nor attribute a merged card to a single leaf.
