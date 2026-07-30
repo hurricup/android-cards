@@ -107,9 +107,10 @@ class QuestionaryActivity() : ComponentActivity() {
                 ProgressBar(stats)
 
                 val currentQuestion = questionary[indexes[0]]
-                val tier = this@QuestionaryActivity.stats.tierOf(currentQuestion)
+                val state = this@QuestionaryActivity.stats.stateOf(currentQuestion)
                 Text(
-                    text = if (tier == 0) "new" else "tier $tier",
+                    text = if (state == null) "new"
+                    else "tier ${state.tier} · ${formatAge(System.currentTimeMillis() - state.lastAnswered)} ago",
                     fontSize = 14.sp,
                     color = darkGray,
                     modifier = Modifier.padding(top = 4.dp)
@@ -309,6 +310,14 @@ class QuestionaryActivity() : ComponentActivity() {
             }
         }
     }
+}
+
+private fun formatAge(millis: Long): String {
+    val hours = (millis / (1000 * 60 * 60)).toInt()
+    if (hours < 1) return "<1 hour"
+    if (hours < 24) return "$hours ${if (hours == 1) "hour" else "hours"}"
+    val d = hours / 24
+    return "$d ${if (d == 1) "day" else "days"}"
 }
 
 class Stat(val total: Int) {
