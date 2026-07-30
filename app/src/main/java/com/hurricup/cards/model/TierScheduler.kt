@@ -41,16 +41,20 @@ class TierScheduler(
         appendTransition(question.questionaryId, question.text, from, to, now)
     }
 
-    /** Appends the tier transition to an append-only JSONL log for later per-word analysis. */
-    private fun appendTransition(leafId: String, question: String, from: Int, to: Int, at: Long) {
+    /**
+     * Appends the tier transition to an append-only JSONL log for later per-word analysis.
+     * Compact keys keep the ever-growing log small: l=leaf id, q=question, f=from tier,
+     * t=to tier, a=timestamp in seconds.
+     */
+    private fun appendTransition(leafId: String, question: String, from: Int, to: Int, atMs: Long) {
         val file = File(filesDir, "$TIER_LOG_DIR/${logFileName(leafId)}")
         file.parentFile?.mkdirs()
         val line = JSONObject()
-            .put("leaf", leafId)
-            .put("question", question)
-            .put("from", from)
-            .put("to", to)
-            .put("at", at)
+            .put("l", leafId)
+            .put("q", question)
+            .put("f", from)
+            .put("t", to)
+            .put("a", atMs / 1000)
         file.appendText("$line\n")
     }
 
