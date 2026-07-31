@@ -462,13 +462,13 @@ private fun PieChart(dist: TierDistribution) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text("New: ${dist.new}", color = pieGray, fontSize = 14.sp)
                         for (tier in dist.perTier.keys.sorted()) {
+                            val due = dist.perTierDue[tier] ?: 0
                             Text(
-                                "Tier $tier: ${dist.perTier.getValue(tier)}",
+                                "Tier $tier: ${dist.perTier.getValue(tier)} ($due)",
                                 color = tierColor(tier),
                                 fontSize = 14.sp,
                             )
                         }
-                        Text("Due: ${dist.due}", fontSize = 14.sp)
                         dist.lastTrained?.let {
                             Text(
                                 "Last trained: ${formatAge(System.currentTimeMillis() - it)} ago",

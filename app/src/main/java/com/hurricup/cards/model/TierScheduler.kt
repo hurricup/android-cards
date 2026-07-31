@@ -105,17 +105,21 @@ class TierScheduler(
         var due = 0
         var lastTrained: Long? = null
         val perTier = HashMap<Int, Int>()
+        val perTierDue = HashMap<Int, Int>()
         for (q in questionary.questions) {
             val state = storeOf(q).state(q.text)
             if (state == null) {
                 new++
             } else {
                 perTier[state.tier] = (perTier[state.tier] ?: 0) + 1
-                if (isDue(state, now, multiplier)) due++
+                if (isDue(state, now, multiplier)) {
+                    due++
+                    perTierDue[state.tier] = (perTierDue[state.tier] ?: 0) + 1
+                }
                 if (lastTrained == null || state.lastAnswered > lastTrained) lastTrained = state.lastAnswered
             }
         }
-        return TierDistribution(new, perTier, due, lastTrained)
+        return TierDistribution(new, perTier, due, lastTrained, perTierDue)
     }
 
     private fun fileName(id: String) = id.replace(Regex("[^\\w]"), "_") + ".json"
@@ -129,6 +133,7 @@ data class TierDistribution(
     val perTier: Map<Int, Int>,
     val due: Int,
     val lastTrained: Long? = null,
+    val perTierDue: Map<Int, Int> = emptyMap(),
 ) {
     val total: Int get() = new + perTier.values.sum()
     val learning: Int get() = perTier.values.sum()
