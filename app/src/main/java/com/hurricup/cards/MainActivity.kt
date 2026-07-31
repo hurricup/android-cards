@@ -127,16 +127,6 @@ class MainActivity : ComponentActivity() {
         recentWindowDays.value = days
     }
 
-    private fun importStatData() {
-        try {
-            val count = TierScheduler(filesDir, multiplier.value.toDouble()).importFromStats()
-            Toast.makeText(this, "Imported tiers from $count files", Toast.LENGTH_SHORT).show()
-            refreshDistributions()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
-        }
-    }
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun SettingsBar() {
@@ -167,10 +157,6 @@ class MainActivity : ComponentActivity() {
                         DropdownMenuItem(
                             text = { Text("Import stats") },
                             onClick = { expanded = false; importLauncher.launch("application/zip") }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Import stat data (tiers)") },
-                            onClick = { expanded = false; importStatData() }
                         )
                         DropdownMenuItem(
                             text = { Text("Mode: ${mode.value.label}") },

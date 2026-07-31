@@ -118,26 +118,6 @@ class TierScheduler(
         return TierDistribution(new, perTier, due, lastTrained)
     }
 
-    /**
-     * Derives tier state from the legacy attempts-log stats (`stats/<id>.json`) into `tiers/<id>.json`,
-     * replaying each question's history through the tier machine. Returns the number of files imported.
-     */
-    fun importFromStats(): Int {
-        val statsDir = File(filesDir, STATS_DIR)
-        val files = statsDir.listFiles { f -> f.extension == "json" } ?: return 0
-        var imported = 0
-        for (file in files) {
-            val stats = QuestionaryStats(file, maxAgeDays = 100_000.0) // don't prune when importing
-            val derived = stats.attemptsByText()
-                .mapNotNull { (text, attempts) -> deriveTier(attempts, maxTier)?.let { text to it } }
-                .toMap()
-            TierStore(File(filesDir, "$TIERS_DIR/${file.name}"), maxTier).replaceAll(derived)
-            imported++
-        }
-        byId.clear() // drop cached stores so fresh state is read
-        return imported
-    }
-
     private fun fileName(id: String) = id.replace(Regex("[^\\w]"), "_") + ".json"
 }
 

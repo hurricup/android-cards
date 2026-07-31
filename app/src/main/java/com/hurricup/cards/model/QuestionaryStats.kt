@@ -47,10 +47,6 @@ class QuestionaryStats(private val file: File, private val maxAgeDays: Double) {
 
     internal fun hasAttempts(questionText: String): Boolean = attempts.containsKey(questionText)
 
-    /** All attempts per question, chronologically. Used to derive tiers for the Leitner scheduler. */
-    internal fun attemptsByText(): Map<String, List<Pair<Long, Boolean>>> =
-        attempts.mapValues { (_, list) -> list.sortedBy { it.timestamp }.map { it.timestamp to it.correct } }
-
     /** Number of answers recorded for [questionText] since [since]. */
     internal fun answersSince(questionText: String, since: Long): Int =
         attempts[questionText]?.count { it.timestamp >= since } ?: 0

@@ -74,23 +74,6 @@ class TierSchedulerTest {
     }
 
     @Test
-    fun importDerivesTiersFromAttemptsLog() {
-        // seed the legacy attempts log via QuestionaryStats: 3 correct answers -> tier 3
-        read("Q", q("a", "x")) // ensure questionary parses (not strictly needed)
-        val stats = QuestionaryStats(File(tmp.root, "stats/Q.json"), maxAgeDays = 100_000.0)
-        stats.recordAttempt("a", correct = true)
-        stats.recordAttempt("a", correct = true)
-        stats.recordAttempt("a", correct = true)
-
-        val imported = TierScheduler(tmp.root, multiplier = 2.0).importFromStats()
-        assertEquals(1, imported)
-
-        val state = TierStore(File(tmp.root, "tiers/Q.json")).state("a")!!
-        // 0->1->2->3
-        assertEquals(3, state.tier)
-    }
-
-    @Test
     fun topTierTakeLimitReservesRoomForLowerTiers() {
         // one tier-3 card (older, due) + one tier-1 card (due); with a tiny session both appear,
         // but the top tier is capped so it can't monopolize.

@@ -29,12 +29,3 @@ fun tierIntervalMs(tier: Int, multiplier: Double): Long =
 /** A card is due when its interval has elapsed since it was last answered. */
 fun isDue(state: TierState, now: Long, multiplier: Double): Boolean =
     now - state.lastAnswered >= tierIntervalMs(state.tier, multiplier)
-
-/** Replays a chronological attempt history through the tier machine to derive current state. */
-fun deriveTier(attempts: List<Pair<Long, Boolean>>, maxTier: Int = MAX_TIER): TierState? {
-    if (attempts.isEmpty()) return null
-    var tier = 0
-    for ((_, correct) in attempts) tier = nextTier(tier, correct, maxTier)
-    val (ts, correct) = attempts.last()
-    return TierState(tier, ts, correct)
-}
