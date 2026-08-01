@@ -21,13 +21,17 @@ class XmlConsistencyTest {
         ?.replace(Regex("\\s*([\\p{P}])\\s*"), "$1") // drop spaces around punctuation
         ?.trim()
 
-    @Test
-    fun noDuplicateQuestions() {
+    private fun xmlFiles(): Array<File> {
         val files = xmlDir.listFiles { f -> f.extension == "xml" }
         assertTrue("No XML assets found at ${xmlDir.absolutePath}", !files.isNullOrEmpty())
+        return files!!
+    }
 
+    /** Same question+answer repeated within one questionary. */
+    @Test
+    fun noDuplicateQuestionsWithinQuestionary() {
         val duplicates = mutableListOf<String>()
-        for (file in files!!) {
+        for (file in xmlFiles()) {
             val parsed = file.inputStream().use { Questionary.parseFile(it) }
             for (questionary in parsed) {
                 val seen = HashSet<Pair<String?, String?>>()
@@ -39,5 +43,24 @@ class XmlConsistencyTest {
             }
         }
         assertTrue("Duplicate questions found:\n${duplicates.joinToString("\n")}", duplicates.isEmpty())
+    }
+
+    /** Same question+answer appearing in more than one file — it should live in a single source. */
+    @Test
+    fun noQuestionSharedAcrossFiles() {
+        val byCard = HashMap<Pair<String?, String?>, MutableSet<String>>() // (text, answer) -> files
+        for (file in xmlFiles()) {
+            val parsed = file.inputStream().use { Questionary.parseFile(it) }
+            for (questionary in parsed) {
+                for (q in questionary.questions) {
+                    byCard.getOrPut(normalize(q.text) to normalize(q.answer)) { mutableSetOf() }.add(file.name)
+                }
+            }
+        }
+        val shared = byCard.filterValues { it.size > 1 }
+        val report = shared.entries.joinToString("\n") { (card, files) ->
+            "'${card.first}' -> '${card.second}': ${files.joinToString(", ")}"
+        }
+        assertTrue("Question+answer shared across files:\n$report", shared.isEmpty())
     }
 }
