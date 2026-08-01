@@ -1,5 +1,13 @@
 # Plans
 
+## User profiles (shared questions, separate stats)
+- Multiple profiles sharing the same questionaries but with independent tier state/stats.
+- Use case: training kids who can't be trusted to self-grade yet — keep their progress separate from the author's.
+- Storage: per-profile subtree, e.g. `profiles/<name>/tiers/…` and `tier_log/…`; scheduler/coordinator take the active profile's dir.
+- UI: a profile switcher (top bar) + create/rename/delete. Active profile persisted.
+- Consider whether settings (mode, multiplier, recent window) are global or per-profile — likely per-profile.
+- Export/import should scope to a profile (or export all).
+
 ## Per-question tier-change history (toward per-word scheduling)
 - Currently only the current tier + last-answered are stored; transition history is discarded.
 - Log each answer per question: timestamp, from-tier → to-tier, correct/wrong.
