@@ -74,27 +74,37 @@ class TierSchedulerTest {
     }
 
     @Test
-    fun topTierTakeLimitReservesRoomForLowerTiers() {
-        // one tier-3 card (older, due) + one tier-1 card (due); with a tiny session both appear,
-        // but the top tier is capped so it can't monopolize.
-        // Build many due top-tier cards and a couple lower — verify lower/new still included.
-        val texts = (1..(TOP_TIER_TAKE_LIMIT + 5)).map { q("top$it", "$it") }
-        val questionary = read("Q", *texts.toTypedArray(), q("low", "L"), q("newone", "N"))
-        val scheduler = TierScheduler(tmp.root, multiplier = 2.0)
-        val now = System.currentTimeMillis()
-        // make top$ cards tier 5 answered long ago (due), low card tier 1 answered long ago (due)
-        val store = TierStore(File(tmp.root, "tiers/Q.json"))
+    fun maxTierIsCappedLeavingRoomForLowerAndNew() {
+        // many due MAX_TIER cards + a due tier-1 card + a new card
+        val topTexts = (1..(TOP_TIER_TAKE_LIMIT + 5)).map { q("top$it", "$it") }
+        val questionary = read("Q", *topTexts.toTypedArray(), q("low", "L"), q("newone", "N"))
+        val old = System.currentTimeMillis() - 1000L * 24 * 60 * 60 * 1000
         val states = HashMap<String, TierState>()
-        for (i in 1..(TOP_TIER_TAKE_LIMIT + 5)) states["top$i"] = TierState(5, now - 100L * 24 * 60 * 60 * 1000, true)
-        states["low"] = TierState(1, now - 100L * 24 * 60 * 60 * 1000, true)
-        store.replaceAll(states)
+        for (i in 1..(TOP_TIER_TAKE_LIMIT + 5)) states["top$i"] = TierState(MAX_TIER, old, true)
+        states["low"] = TierState(1, old, true)
+        TierStore(File(tmp.root, "tiers/Q.json")).replaceAll(states)
 
-        val session = TierScheduler(tmp.root, multiplier = 2.0)
+        val chosen = TierScheduler(tmp.root, multiplier = 2.0)
             .selectSession(questionary, sessionSize = 50)
-        val questions = questionary.questions
-        val chosen = session.map { questions[it].text }.toSet()
-        // top tier capped, so not all top cards taken, leaving room for the low-tier and the new card
-        assertTrue("low tier card should be included", "low" in chosen)
+            .map { questionary.questions[it].text }.toSet()
+        assertTrue("lower-tier card should be included", "low" in chosen)
         assertTrue("new card should be included", "newone" in chosen)
+    }
+
+    @Test
+    fun nonMaxTierIsNotCapped() {
+        // a due tier-2 backlog larger than the session must fill it entirely — no lower tier leaks in
+        val topTexts = (1..(TOP_TIER_TAKE_LIMIT + 5)).map { q("t2_$it", "$it") }
+        val questionary = read("Q", *topTexts.toTypedArray(), q("low", "L"))
+        val old = System.currentTimeMillis() - 1000L * 24 * 60 * 60 * 1000
+        val states = HashMap<String, TierState>()
+        for (i in 1..(TOP_TIER_TAKE_LIMIT + 5)) states["t2_$i"] = TierState(2, old, true)
+        states["low"] = TierState(1, old, true)
+        TierStore(File(tmp.root, "tiers/Q.json")).replaceAll(states)
+
+        val chosen = TierScheduler(tmp.root, multiplier = 2.0)
+            .selectSession(questionary, sessionSize = TOP_TIER_TAKE_LIMIT)
+            .map { questionary.questions[it].text }.toSet()
+        assertFalse("tier-1 card should not appear while the tier-2 backlog fills the session", "low" in chosen)
     }
 }

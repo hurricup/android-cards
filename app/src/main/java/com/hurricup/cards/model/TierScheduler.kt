@@ -3,7 +3,7 @@ package com.hurricup.cards.model
 import org.json.JSONObject
 import java.io.File
 
-/** Max cards taken from the single highest due tier, so sessions don't become all top-tier. */
+/** Max cards taken from the top (fully-learned) tier per session, so it can't crowd out the rest. */
 const val TOP_TIER_TAKE_LIMIT = 20
 
 internal const val STATS_DIR = "stats"
@@ -15,7 +15,7 @@ internal const val TIER_LOG_DIR = "tier_log"
  * questionary id ([Question.questionaryId]), so a question keeps one tier regardless of which
  * questionary (plain or composite) shows it.
  *
- * Session composition: due cards highest tier first (with a cap on the top tier), then new
+ * Session composition: due cards highest tier first (only the max/top tier is capped), then new
  * (tier 0) to fill the session. Tier state lives in `tiers/<id>.json`, separate from the legacy
  * `stats/<id>.json` attempts log.
  */
@@ -84,12 +84,11 @@ class TierScheduler(
         }
 
         val result = mutableListOf<Int>()
-        val tiersDesc = dueByTier.keys.sortedDescending()
-        for ((rank, tier) in tiersDesc.withIndex()) {
+        for (tier in dueByTier.keys.sortedDescending()) {
             if (result.size >= sessionSize) break
             val pool = dueByTier.getValue(tier).shuffled()
-            // cap the highest due tier so it can't crowd out lower tiers and new cards
-            val capped = if (rank == 0) pool.take(TOP_TIER_TAKE_LIMIT) else pool
+            // cap only the max tier (fully learned) so it can't crowd out lower tiers and new cards
+            val capped = if (tier == maxTier) pool.take(TOP_TIER_TAKE_LIMIT) else pool
             result.addAll(capped.take(sessionSize - result.size))
         }
         if (result.size < sessionSize) {
