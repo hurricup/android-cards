@@ -58,19 +58,25 @@ class TierSchedulerTest {
     }
 
     @Test
-    fun tierOneCardIsDueAfterOneDay() {
+    fun tierOneIsAlwaysDue() {
         val questionary = read("Q", q("a", "1"))
         val scheduler = TierScheduler(tmp.root, multiplier = 2.0)
         val question = questionary.questions.single()
         scheduler.record(question, correct = false) // wrong first answer -> tier 1, answered now
 
-        // right after answering, not due (interval 1 day)
-        val store = TierStore(File(tmp.root, "tiers/Q.json"))
-        val state = store.state("a")!!
+        val state = TierStore(File(tmp.root, "tiers/Q.json")).state("a")!!
         assertEquals(1, state.tier)
-        assertFalse(isDue(state, System.currentTimeMillis(), 2.0))
-        // a day + later, due
-        assertTrue(isDue(state, state.lastAnswered + 25L * 60 * 60 * 1000, 2.0))
+        // due even immediately after answering
+        assertTrue(isDue(state, state.lastAnswered, 2.0))
+    }
+
+    @Test
+    fun tierTwoRespectsInterval() {
+        val now = System.currentTimeMillis()
+        val state = TierState(tier = 2, lastAnswered = now, lastCorrect = true)
+        // tier 2 interval = multiplier^1 = 2 days
+        assertFalse(isDue(state, now + 25L * 60 * 60 * 1000, 2.0)) // 1 day: not due
+        assertTrue(isDue(state, now + 3L * 24 * 60 * 60 * 1000, 2.0)) // 3 days: due
     }
 
     @Test

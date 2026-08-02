@@ -27,6 +27,9 @@ fun nextTier(tier: Int, correct: Boolean, maxTier: Int = MAX_TIER): Int = when {
 fun tierIntervalMs(tier: Int, multiplier: Double): Long =
     (multiplier.pow((tier - 1).coerceAtLeast(0)) * TIER_DAY_MS).toLong()
 
-/** A card is due when its interval has elapsed since it was last answered. */
+/**
+ * A card is due when its interval has elapsed since it was last answered.
+ * Tier 1 (just learning) is always due, so it recurs every session until it graduates.
+ */
 fun isDue(state: TierState, now: Long, multiplier: Double): Boolean =
-    now - state.lastAnswered >= tierIntervalMs(state.tier, multiplier)
+    state.tier <= 1 || now - state.lastAnswered >= tierIntervalMs(state.tier, multiplier)
