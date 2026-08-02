@@ -29,14 +29,6 @@ class TierStore(private val file: File, private val maxTier: Int = MAX_TIER) {
         save()
     }
 
-    /** Removes all questions currently at [tier] (back to unknown/tier 0). Returns how many. */
-    fun clearTier(tier: Int): Int {
-        val keys = states.filterValues { it.tier == tier }.keys.toList()
-        keys.forEach { states.remove(it) }
-        if (keys.isNotEmpty()) save()
-        return keys.size
-    }
-
     private fun load() {
         if (!file.exists()) return
         val json = JSONObject(file.readText())

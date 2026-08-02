@@ -127,12 +127,6 @@ class MainActivity : ComponentActivity() {
         recentWindowDays.value = days
     }
 
-    private fun resetTier1() {
-        val moved = TierScheduler(filesDir, multiplier.value.toDouble()).resetTierToUnknown(1)
-        Toast.makeText(this, "Moved $moved tier-1 questions to unknown", Toast.LENGTH_SHORT).show()
-        refreshDistributions()
-    }
-
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun SettingsBar() {
@@ -175,10 +169,6 @@ class MainActivity : ComponentActivity() {
                         DropdownMenuItem(
                             text = { Text("Recent window: ${days(recentWindowDays.value)}") },
                             onClick = { windowSubmenu = true }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Reset tier 1 → unknown") },
-                            onClick = { expanded = false; resetTier1() }
                         )
                     }
                     DropdownMenu(
