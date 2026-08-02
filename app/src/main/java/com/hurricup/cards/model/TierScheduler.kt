@@ -60,6 +60,14 @@ class TierScheduler(
 
     private fun logFileName(id: String) = id.replace(Regex("[^\\w]"), "_") + ".jsonl"
 
+    /** Moves every question at [tier] back to unknown (tier 0) across all stores. Returns how many. */
+    fun resetTierToUnknown(tier: Int): Int {
+        val files = File(filesDir, TIERS_DIR).listFiles { f -> f.extension == "json" } ?: return 0
+        val moved = files.sumOf { TierStore(it, maxTier).clearTier(tier) }
+        byId.clear()
+        return moved
+    }
+
     /** Current tier of a question (0 = new/unknown). */
     fun tierOf(question: Question): Int = storeOf(question).state(question.text)?.tier ?: 0
 
