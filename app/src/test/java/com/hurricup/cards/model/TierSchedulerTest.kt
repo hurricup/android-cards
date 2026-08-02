@@ -29,8 +29,8 @@ class TierSchedulerTest {
 
     @Test
     fun nextTierTransitions() {
-        assertEquals(1, nextTier(0, correct = false)) // unknown enters at 1 regardless
-        assertEquals(1, nextTier(0, correct = true))
+        assertEquals(1, nextTier(0, correct = false)) // wrong first answer -> tier 1
+        assertEquals(2, nextTier(0, correct = true))  // correct first answer skips to tier 2
         assertEquals(2, nextTier(1, correct = true))
         assertEquals(1, nextTier(1, correct = false)) // reset to 1
         assertEquals(3, nextTier(2, correct = true))
@@ -43,9 +43,9 @@ class TierSchedulerTest {
         val q = read("Q", q("a", "x")).questions.single()
         TierScheduler(tmp.root, multiplier = 2.0).record(q, correct = true)
 
-        // fresh scheduler reads from disk: tier 1
+        // fresh scheduler reads from disk: correct first answer -> tier 2
         val dist = TierScheduler(tmp.root, multiplier = 2.0).distribution(read("Q", q("a", "x")))
-        assertEquals(1, dist.perTier[1])
+        assertEquals(1, dist.perTier[2])
         assertEquals(0, dist.new)
     }
 
@@ -62,7 +62,7 @@ class TierSchedulerTest {
         val questionary = read("Q", q("a", "1"))
         val scheduler = TierScheduler(tmp.root, multiplier = 2.0)
         val question = questionary.questions.single()
-        scheduler.record(question, correct = true) // tier 1, answered now
+        scheduler.record(question, correct = false) // wrong first answer -> tier 1, answered now
 
         // right after answering, not due (interval 1 day)
         val store = TierStore(File(tmp.root, "tiers/Q.json"))

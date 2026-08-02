@@ -12,12 +12,13 @@ private const val TIER_DAY_MS = 24L * 60 * 60 * 1000
 
 /**
  * Tier transition for an answer.
- * Tier 0 (unknown) enters learning at tier 1 on first answer and never returns to 0.
+ * Tier 0 (unknown): a correct first answer jumps to tier 2 (already known, skip the 1-day step),
+ * a wrong one enters at tier 1; either way it never returns to 0.
  * From tier ≥ 1: correct promotes (capped at [maxTier]); wrong resets to tier 1 — a retrieval
  * failure means the memory needs relearning soon, so it goes back to the shortest interval.
  */
 fun nextTier(tier: Int, correct: Boolean, maxTier: Int = MAX_TIER): Int = when {
-    tier <= 0 -> 1
+    tier <= 0 -> if (correct) minOf(maxTier, 2) else 1
     correct -> minOf(maxTier, tier + 1)
     else -> 1
 }
