@@ -55,6 +55,11 @@ Replace the decay-weighted score + three-pile selection with a Leitner box syste
 - Model change: a merged Question carries multiple owner ids (questionaryIds: List<String>); StatsCoordinator.record/score/lastAsked/hasAttempts operate over the set. Localized to the coordinator.
 - Open: key on exact (text, answer) (collapse true duplicates only, keep same-spelling-different-meaning separate) — leaning this way — vs. text-only (union answers).
 
+## Hybrid questionaries (own questions + references)
+- Currently `<questions>` and `<questionaries>` are mutually exclusive (Questionary.kt: refs win, own questions ignored). To combine, you must split the questions into a separate leaf XML and reference it.
+- Idea: allow a questionary to declare both. Parser generates a hidden leaf questionary from the inline `<questions>`, then builds the composite from the references plus that hidden leaf.
+- Same end result is achievable today with an extra XML file, but declaring both inline is cleaner (one file, no bookkeeping leaf to name/hide).
+
 ## XML consistency tests
 - Add tests to check XML questionary files for consistency
 - Detect duplicate questions and answers within a questionary
